@@ -1157,6 +1157,7 @@
             </div>
             <div class="playlist-controls">
                 <button class="btn btn-primary" id="addSongBtn">+ New</button>
+                <button class="btn btn-secondary" id="loadPlaylistBtn" title="Charger une liste de morceaux (fichier JSON)">📂 Liste</button>
                 <button class="btn btn-danger" id="clearPlaylistBtn">Clear</button>
                 <label class="lock-playlist" title="Lock playlist reorder">
                     <input type="checkbox" id="lockPlaylistCheck">
@@ -3617,13 +3618,52 @@ if (!app.copiedEvents || app.copiedEvents.length === 0) return;
             reader.onload = (e) => {
                 try {
                     const data = JSON.parse(e.target.result);
-                    
-                    app.playlist = data.playlist || [];
-                    app.activeSongId = data.activeSongId || null;
-                    
+
+                    // Formats acceptés :
+                    // 1) export playlist : {playlist: [...], activeSongId}
+                    // 2) tableau brut : [...]
+                    // 3) morceau seul : {id, name, events} -> ajouté à la playlist
+                    if (data && Array.isArray(data.playlist)) {
+                        app.playlist = data.playlist;
+                        app.activeSongId = data.activeSongId || null;
+                    } else if (Array.isArray(data)) {
+                        app.playlist = data;
+                        app.activeSongId = null;
+                    } else if (data && data.id && data.name && Array.isArray(data.events)) {
+                        data.id = generateId();
+                        app.playlist.push(data);
+                        app.activeSongId = data.id;
+                    } else {
+                        alert('Format de fichier non reconnu (playlist JSON attendue)');
+                        return;
+                    }
+
+                    if (app.playlist.length === 0) {
+                        alert('Liste vide : aucun morceau importé');
+                        return;
+                    }
+
+                    // Normalisation : un fichier incomplet ne doit jamais casser la grille
                     app.playlist.forEach(song => {
-                        if (!song.customGroups) {
+                        if (!song.id) song.id = generateId();
+                        if (!song.name) song.name = 'Imported Song';
+                        if (typeof song.bpm !== 'number') song.bpm = 120;
+                        if (typeof song.measures !== 'number') song.measures = 100;
+                        if (typeof song.subdivision !== 'number') song.subdivision = 4;
+                        if (!Array.isArray(song.measureBeats)) {
+                            song.measureBeats = Array.from({ length: song.measures }, () => 4);
+                        }
+                        if (!Array.isArray(song.measureSubdivisions)) {
+                            song.measureSubdivisions = Array.from({ length: song.measures }, () => song.subdivision);
+                        }
+                        if (!Array.isArray(song.customGroups)) {
                             song.customGroups = [];
+                        }
+                        if (!Array.isArray(song.tempoRamps)) {
+                            song.tempoRamps = [];
+                        }
+                        if (!Array.isArray(song.events)) {
+                            song.events = [];
                         }
                         song.events.forEach(event => {
                             if (!event.ccs) {
@@ -3636,7 +3676,11 @@ if (!app.copiedEvents || app.copiedEvents.length === 0) return;
                             }
                         });
                     });
-                    
+
+                    if (!app.playlist.find(s => s.id === app.activeSongId)) {
+                        app.activeSongId = app.playlist[0].id;
+                    }
+
                     saveToStorage();
                     renderPlaylist();
                     if (app.activeSongId) {
@@ -3644,7 +3688,7 @@ if (!app.copiedEvents || app.copiedEvents.length === 0) return;
                     }
                 } catch (err) {
                     console.error('Import error:', err);
-                    alert('Failed to import playlist');
+                    alert('Échec de l’import de la liste');
                 }
             };
             reader.readAsText(file);
@@ -3985,6 +4029,9 @@ if (!app.copiedEvents || app.copiedEvents.length === 0) return;
                     importPlaylist(e.target.files[0]);
                     e.target.value = '';
                 }
+            });
+            document.getElementById('loadPlaylistBtn').addEventListener('click', () => {
+                document.getElementById('importFile').click();
             });
 
             document.getElementById('clearPlaylistBtn').addEventListener('click', () => {

@@ -126,6 +126,9 @@ Actifs partout **sauf** dans les champs de saisie (`input`, `select`, `textarea`
 - Suppression d'un morceau avec confirmation.
 - Verrou `🔒` : bloque le réordonnancement **et** active le pilotage par **Program Change MIDI** :
   un message PC reçu sur MIDI IN sélectionne le morceau correspondant et démarre la lecture.
+- Bouton **`📂 Liste`** : charge une liste depuis un fichier JSON — formats acceptés : export playlist
+  `{playlist, activeSongId}`, tableau brut `[...]`, ou morceau seul `{id, name, events}` (ajouté à la liste).
+  Les fichiers incomplets sont normalisés (valeurs par défaut) au lieu de casser la grille.
 - **Clic droit sur la playlist** : tri `A→Z`, `Import` / `Export` (JSON), `+ Load Song` (fichier morceau),
   `Export CSV` (format type `Gotha!.csv`).
 
