@@ -1,0 +1,4348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+    <title>Sequencer 4</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: rgba(10, 10, 15, 0.95);
+            --bg-panel: rgba(20, 20, 30, 0.9);
+            --bg-glass: rgba(30, 30, 45, 0.6);
+            --bg-glass-hover: rgba(50, 50, 70, 0.7);
+            --bg-panel-solid: #12121a;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.5);
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --grid-line: rgba(255, 255, 255, 0.08);
+            --beat-line: rgba(255, 255, 255, 0.12);
+            --event-color: #f59e0b;
+            --event-selected: #fbbf24;
+            --event-glow: rgba(245, 158, 11, 0.5);
+            --active-measure: rgba(99, 102, 241, 0.2);
+            --danger: #ef4444;
+            --success: #22c55e;
+            --midi-in: #22c55e;
+            --midi-out: #f59e0b;
+            --border-glass: rgba(255, 255, 255, 0.12);
+            --shadow-glass: 0 12px 48px rgba(0, 0, 0, 0.6);
+            --shadow-glow: 0 0 30px var(--accent-glow);
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0c0c14 0%, #111827 50%, #0c0c14 100%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            gap: 0;
+        }
+
+        .sidebar {
+            width: 340px;
+            min-width: 340px;
+            background: rgba(12, 12, 18, 0.98);
+            backdrop-filter: blur(30px) saturate(150%);
+            -webkit-backdrop-filter: blur(30px) saturate(150%);
+            border-right: 1px solid var(--border-glass);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 4px 0 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .sidebar-title {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .playlist-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+        .lock-playlist {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: auto;
+        }
+
+        .lock-playlist input {
+            cursor: pointer;
+        }
+
+        .lock-playlist.locked span::after {
+            content: "🔓";
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-glass);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-glass-hover);
+            border-color: var(--accent);
+        }
+
+        .btn-secondary {
+            background: var(--bg-panel-solid);
+            color: var(--text-primary);
+            border: 1px solid var(--grid-line);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(80, 80, 90, 0.9);
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-icon {
+            padding: 6px 8px;
+            min-width: 28px;
+            justify-content: center;
+        }
+
+        .playlist {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .playlist-item {
+            padding: 14px 16px;
+            background: var(--bg-panel-solid);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid var(--border-glass);
+            position: relative;
+            user-select: none;
+        }
+
+        .playlist-item:hover {
+            background: rgba(30, 30, 50, 0.9);
+            border-color: var(--accent);
+            transform: translateX(4px);
+        }
+
+        .playlist-item.active {
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 25px var(--accent-glow), inset 0 0 20px rgba(99, 102, 241, 0.1);
+        }
+
+        .playlist-item.dragging {
+            opacity: 0.5;
+        }
+
+        .playlist-item .song-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+        }
+
+        .playlist-item .song-info {
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .playlist-item .drag-handle {
+            position: absolute;
+            right: 32px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            cursor: grab;
+            font-size: 16px;
+        }
+
+        .delete-song-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1;
+            padding: 0;
+            display: none;
+        }
+
+        .playlist-item:hover .delete-song-btn {
+            display: block;
+        }
+
+        .delete-song-btn:hover {
+            background: #ff2015;
+        }
+
+        .playlist-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #0c0c12;
+            overflow: hidden;
+        }
+
+        .control-bar {
+            padding: 14px 20px;
+            background: rgba(15, 15, 25, 0.95);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-bottom: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 10px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .control-input {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 80px;
+        }
+
+        .control-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .control-input.number {
+            width: 60px;
+            text-align: center;
+        }
+
+        select.control-input {
+            width: 90px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.85) !important;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        select.control-input option {
+            background: rgba(15, 15, 25, 0.98);
+            color: var(--text-primary);
+        }
+
+        .song-name-input {
+            font-size: 14px;
+            font-weight: 600;
+            width: 180px;
+        }
+
+        .divider {
+            width: 1px;
+            height: 24px;
+            background: var(--grid-line);
+        }
+
+        .event-details {
+            display: none !important;
+        }
+
+        .event-detail-input {
+            width: 60px;
+            text-align: center;
+        }
+
+        #eventValue {
+            width: 70px;
+        }
+
+        .transport-bar {
+            padding: 14px 20px;
+            background: rgba(10, 10, 18, 0.95);
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border-bottom: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .audio-input-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .audio-input-group.hidden {
+            display: none;
+        }
+
+        .vu-meter-container {
+            width: 100px;
+            height: 8px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(10px);
+        }
+
+        .vu-meter {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #22c55e 0%, #84cc16 50%, #ef4444 100%);
+            transition: width 0.05s ease-out;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+
+        .beat-leds {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .beat-led {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #333;
+            border: 1px solid #555;
+            transition: all 0.1s ease;
+        }
+
+        .beat-led.active {
+            box-shadow: 0 0 10px currentColor, inset 0 0 4px rgba(255,255,255,0.5);
+        }
+
+        .beat-led.beat-1.active {
+            background: #ef4444;
+            color: #ef4444;
+        }
+
+        .beat-led:not(.beat-1).active {
+            background: #22c55e;
+            color: #22c55e;
+        }
+
+        .midi-indicator-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .midi-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .midi-led {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #444;
+            border: 1px solid #666;
+        }
+
+        .midi-led.on {
+            background: var(--midi-in);
+            box-shadow: 0 0 10px var(--midi-in), inset 0 0 4px rgba(255,255,255,0.5);
+        }
+
+        .midi-led.out {
+            background: #444;
+        }
+
+        .midi-led.out.on {
+            background: var(--midi-out);
+            box-shadow: 0 0 10px var(--midi-out), inset 0 0 4px rgba(255,255,255,0.5);
+        }
+
+        .play-led {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .play-led.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent), 0 0 30px var(--accent-glow), inset 0 0 8px rgba(255,255,255,0.4);
+        }
+
+        .play-led.active {
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent), inset 0 0 4px rgba(255,255,255,0.5);
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-glass);
+        }
+
+        .midi-out-display {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fbbf24;
+            min-width: 100px;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+
+        .midi-select {
+            background: rgba(0, 0, 0, 0.85) !important;
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+            max-width: 140px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        .midi-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .midi-select option {
+            background: rgba(15, 15, 25, 0.98);
+            color: var(--text-primary);
+            padding: 8px;
+        }
+
+        .midi-select:hover {
+            border-color: var(--accent);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .midi-select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .sequencer-area {
+            flex: 1;
+            overflow: auto;
+            position: relative;
+            background: linear-gradient(180deg, rgba(20, 20, 30, 0.9) 0%, rgba(15, 15, 22, 0.95) 100%);
+        }
+
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            padding: 12px;
+            min-height: 100%;
+        }
+
+        .grid-row {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .measure {
+            border-right: 1px solid var(--border-glass);
+            position: relative;
+            background: rgba(15, 15, 25, 0.8);
+            margin-right: 3px;
+            margin-bottom: 3px;
+            border-radius: var(--radius-sm);
+            transition: all 0.3s ease;
+        }
+
+        .measure:hover {
+            background: rgba(25, 25, 40, 0.9);
+        }
+
+        .measure.playing {
+            background: rgba(99, 102, 241, 0.25);
+            box-shadow: inset 0 0 30px rgba(99, 102, 241, 0.2);
+        }
+
+        .measure-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 28px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-glass);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .measure.group-start {
+            border-left: 3px solid var(--accent);
+        }
+
+        .measure-header.group-start {
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .measure.measure-grouped {
+        }
+
+        .measure.measure-selected, .measure-header.measure-selected {
+            box-shadow: inset 0 0 0 2px rgba(0, 170, 255, 0.8);
+        }
+
+        .group-color-btn {
+            width: 22px;
+            height: 22px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .group-color-btn:hover {
+            opacity: 1;
+            transform: scale(1.15);
+        }
+
+        .group-color-btn.active {
+            opacity: 1;
+            box-shadow: 0 0 0 2px white;
+        }
+
+        .beats-container {
+            display: flex;
+            height: 60px;
+        }
+
+        .beat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            position: relative;
+        }
+
+        .beat:last-child {
+            border-right: none;
+        }
+
+        .beat-number {
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .beat-subdivisions {
+            display: flex;
+            flex: 1;
+            width: 100%;
+        }
+
+        .subdivision {
+            flex: 1;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .subdivision:last-child {
+            border-right: none;
+        }
+
+        .subdivision-cell {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .beat-line.beat-1 {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .event {
+            position: absolute;
+            background: var(--event-color);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            z-index: 5;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        .event:hover {
+            filter: brightness(1.2);
+            z-index: 6;
+        }
+
+        .event.selected {
+            background: var(--event-selected);
+            box-shadow: 0 0 0 2px white;
+            z-index: 7;
+        }
+
+        .event.volume {
+            background: #90EE90;
+            color: #004400;
+        }
+
+        .event.pilot {
+            background: #ef4444;
+            color: white;
+        }
+
+        .event-label {
+            display: block;
+            font-size: 9px;
+            opacity: 0.9;
+            line-height: 12px;
+            text-align: center;
+        }
+
+        .playhead {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: white;
+            z-index: 20;
+            box-shadow: 0 0 6px white, 0 0 12px white;
+            pointer-events: none;
+            transition: background 0.05s, box-shadow 0.05s;
+        }
+
+        .playhead.stopped {
+            background: white;
+            box-shadow: 0 0 6px white, 0 0 12px white !important;
+        }
+
+        .playhead.beat-1 {
+            background: white;
+            box-shadow: 0 0 8px white, 0 0 16px white;
+        }
+
+        .playhead.beat-other {
+            background: white;
+            box-shadow: 0 0 6px white, 0 0 12px white;
+        }
+
+        @keyframes flashBeat1 {
+            0% { background: white; box-shadow: 0 0 6px white, 0 0 12px white; }
+            5% { background: white; box-shadow: 0 0 10px white, 0 0 25px white, 0 0 40px white; }
+            100% { background: white; box-shadow: 0 0 6px white, 0 0 12px white; }
+        }
+
+        @keyframes flashBeat {
+            0% { background: white; box-shadow: 0 0 6px white, 0 0 12px white; }
+            5% { background: white; box-shadow: 0 0 8px white, 0 0 18px white; }
+            100% { background: white; box-shadow: 0 0 6px white, 0 0 12px white; }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 6px white, 0 0 12px white; }
+            50% { box-shadow: 0 0 8px white, 0 0 16px white; }
+        }
+
+        .playhead.flash-beat-1 {
+            animation: flashBeat1 0.1s ease-out;
+        }
+
+        .playhead.flash-beat {
+            animation: flashBeat 0.1s ease-out;
+        }
+
+        .playhead.playing {
+            animation: pulseGlow 0.5s ease-in-out infinite;
+        }
+
+        .playhead.playing.flash-beat-1,
+        .playhead.playing.flash-beat {
+            animation: pulseGlow 0.5s ease-in-out infinite, flashBeat1 0.1s ease-out, flashBeat 0.1s ease-out;
+        }
+
+        .sequence-status {
+            position: fixed;
+            top: 120px;
+            right: 20px;
+            padding: 8px 16px;
+            background: rgba(0, 122, 255, 0.9);
+            color: white;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 100;
+            display: none;
+        }
+
+        .sequence-status.detected {
+            display: block;
+            background: rgba(48, 209, 88, 0.9);
+            animation: pulse 0.5s infinite alternate;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: rgba(30, 30, 45, 0.95);
+            backdrop-filter: blur(40px) saturate(180%);
+            -webkit-backdrop-filter: blur(40px) saturate(180%);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            min-width: 320px;
+            max-width: 420px;
+            box-shadow: var(--shadow-glass), 0 25px 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-glass);
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .modal-message {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .midi-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .help-text {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: var(--radius-sm);
+            line-height: 1.6;
+            border: 1px solid var(--border-glass);
+        }
+
+        .cc-editor-modal {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 420px;
+            background: var(--bg-panel);
+            border-radius: 12px;
+            border: 1px solid var(--grid-line);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            padding: 12px;
+        }
+
+        .cc-editor-modal.visible {
+            display: flex;
+        }
+
+        .context-menu {
+            position: fixed;
+            background: rgba(20, 20, 30, 0.98);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 8px 0;
+            min-width: 160px;
+            box-shadow: var(--shadow-glass);
+            z-index: 2000;
+            display: none;
+        }
+
+        .context-menu.visible {
+            display: block;
+        }
+
+        .context-menu-header {
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-glass);
+            margin-bottom: 4px;
+        }
+
+        .context-menu-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-primary);
+            transition: background 0.2s ease;
+        }
+
+        .context-menu-item:hover {
+            background: var(--bg-glass-hover);
+        }
+
+        .context-menu-divider {
+            height: 1px;
+            background: var(--border-glass);
+            margin: 4px 0;
+        }
+
+        .context-menu-danger {
+            color: var(--danger);
+        }
+
+        .context-menu-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .cc-editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--grid-line);
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .cc-editor-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .cc-editor-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .cc-editor-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            min-width: 24px;
+        }
+
+        .cc-editor-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent);
+            margin: 12px 0 8px 0;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border-glass);
+        }
+
+        .cc-editor-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+        }
+
+        .cc-editor-item span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            min-width: 20px;
+        }
+
+        .cc-editor-item input {
+            flex: 1;
+        }
+
+        .tempo-ramp-modal {
+            width: 320px;
+        }
+
+        .tempo-ramp-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .tempo-arrow {
+            font-size: 18px;
+            color: var(--accent);
+        }
+
+        .tempo-ramp-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .tempo-ramp-row label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .tempo-ramp-row input {
+            width: 80px;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--border-glass);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .tempo-ramp-badge {
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            font-size: 8px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .tempo-ramp-badge.start {
+            background: #30d158;
+            color: #004400;
+        }
+
+        .tempo-ramp-badge.end {
+            background: #ff9500;
+            color: #004400;
+        }
+
+        .tempo-ramp-line {
+            position: absolute;
+            top: 8px;
+            height: 2px;
+            background: linear-gradient(90deg, #30d158, #ff9500);
+            z-index: 4;
+            pointer-events: none;
+        }
+
+        .measure.tempo-ramp-start {
+            box-shadow: inset 0 -4px 0 0 #30d158;
+        }
+
+        .measure.tempo-ramp-start-active {
+            box-shadow: inset 0 -4px 0 0 #30d158;
+        }
+
+        .measure.tempo-ramp-end {
+            box-shadow: inset 0 -4px 0 0 #ff9500;
+        }
+
+        .measure.tempo-ramp-range {
+            box-shadow: inset 0 -4px 0 0;
+        }
+
+        .measure.tempo-ramp-end .tempo-ramp-badge {
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        .tempo-ramp-badge.editable:hover {
+            filter: brightness(1.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">Playlist</h1>
+            </div>
+            <div class="playlist-controls">
+                <button class="btn btn-primary" id="addSongBtn">+ New</button>
+                <button class="btn btn-danger" id="clearPlaylistBtn">Clear</button>
+                <label class="lock-playlist" title="Lock playlist reorder">
+                    <input type="checkbox" id="lockPlaylistCheck">
+                    <span>🔒</span>
+                </label>
+            </div>
+            <input type="file" id="importFile" class="file-input" accept=".json">
+            <input type="file" id="loadSongFile" class="file-input" accept=".json">
+            <div class="playlist" id="playlist"></div>
+        </aside>
+
+        <main class="main-content">
+            <div class="control-bar">
+                <div class="control-group">
+                    <span class="control-label">Song</span>
+                    <input type="text" class="control-input song-name-input" id="songName" placeholder="Song name">
+                </div>
+                <div class="divider"></div>
+                <div class="control-group">
+                    <span class="control-label">BPM</span>
+                    <input type="number" class="control-input number" id="bpmInput" min="20" max="300" value="120" step="0.001" style="width: 70px;">
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Measures</span>
+                    <input type="number" class="control-input number" id="measuresInput" min="10" max="1000" value="100" style="width: 70px;">
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Subdiv</span>
+                    <select class="control-input" id="subdivInput">
+                        <option value="4">¼ Notes</option>
+                        <option value="8">8th Notes</option>
+                        <option value="12">12/8 (3/beat)</option>
+                        <option value="16">16th Notes</option>
+                    </select>
+                </div>
+                <div class="divider"></div>
+                <div class="control-group">
+                    <span class="control-label">Group</span>
+                    <input type="text" class="control-input" id="groupNameInput" placeholder="Name" maxlength="8" style="width: 70px;">
+                    <div id="groupColorButtons" style="display: flex; gap: 3px;">
+                        <button class="group-color-btn" data-color="#ff2d55" style="background: #ff2d55;" title="Red"></button>
+                        <button class="group-color-btn" data-color="#ff9500" style="background: #ff9500;" title="Orange"></button>
+                        <button class="group-color-btn" data-color="#ffd60a" style="background: #ffd60a;" title="Yellow"></button>
+                        <button class="group-color-btn" data-color="#30d158" style="background: #30d158;" title="Green"></button>
+                        <button class="group-color-btn" data-color="#64d2ff" style="background: #64d2ff;" title="Teal"></button>
+                        <button class="group-color-btn" data-color="#007aff" style="background: #007aff;" title="Blue"></button>
+                        <button class="group-color-btn" data-color="#5856d6" style="background: #5856d6;" title="Indigo"></button>
+                        <button class="group-color-btn" data-color="#af52de" style="background: #af52de;" title="Purple"></button>
+                        <button class="group-color-btn" data-color="#ff2d92" style="background: #ff2d92;" title="Pink"></button>
+                        <button class="group-color-btn" data-color="#D3D3D3" style="background: #D3D3D3;" title="Cyan"></button>
+                    </div>
+                    <button class="btn btn-danger btn-icon" id="deleteGroupBtn" title="Delete Group" style="margin-left: 5px; padding: 4px 8px;">✕</button>
+                    <div class="beat-leds" id="beatLeds"></div>
+                </div>
+                <div class="event-details hidden" id="eventDetails">
+                    <span class="control-label">Channel</span>
+                    <input type="number" class="control-input event-detail-input" id="eventChannel" min="1" max="16" value="1" style="width:100px">
+                    <span class="control-label">CC</span>
+                    <input type="number" class="control-input event-detail-input" id="eventCC" min="0" max="127" value="0" style="width:100px">
+                    <span class="control-label">Value</span>
+                    <input type="number" class="control-input event-detail-input" id="eventValue" min="0" max="127" value="127" style="width:100px">
+                    <button class="btn btn-danger btn-icon" id="deleteEventBtn" title="Delete (SHIFT+Click)">✕</button>
+                </div>
+                <div class="control-group">
+                    <button class="btn btn-secondary" id="saveSongBtn" style="display:none;">Save Song</button>
+                </div>
+                <div class="control-group" style="margin-left: auto;">
+                    <span id="selectedMeasuresDisplay" style="color: #0af; min-width: 50px; font-size: 12px;">-</span>
+                </div>
+            </div>
+
+            <div class="transport-bar">
+                <div class="audio-input-group" id="audioInputGroup">
+                    <span class="control-label">Audio In</span>
+                    <select class="midi-select" id="audioInSelect">
+                        <option value="">Select Audio Input</option>
+                    </select>
+                    <div class="vu-meter-container">
+                        <div class="vu-meter" id="vuMeter"></div>
+                    </div>
+                </div>
+                <label style="display: flex; align-items: center; gap: 4px; margin-left: 10px; font-size: 11px; color: var(--text-secondary); cursor: pointer;">
+                    <input type="checkbox" id="midiPcCheckbox">
+                    <span>Audio Start</span>
+                </label>
+                <span class="control-label" style="margin-left: 10px;">Start +</span>
+                <input type="number" id="startOffsetInput" class="control-input" value="0" min="0" max="1000" step="1" style="width: 60px; text-align: center;">
+                <span class="control-label">ms</span>
+                <div class="playback-controls">
+                    <span class="play-led" id="playLed"></span>
+                    <button class="btn btn-primary" id="playBtn">▶</button>
+                    <span class="control-label" id="positionDisplay">Measure: --</span>
+                    <span class="midi-out-display" id="midiOutDisplay">--</span>
+                </div>
+                <div class="midi-indicator-group" style="margin-left: auto;">
+                    <div class="midi-indicator">
+                        <span class="midi-led" id="midiInLed"></span>
+                        <select class="midi-select" id="midiInSelect">
+                            <option value="">MIDI IN</option>
+                        </select>
+                        <button class="btn btn-secondary btn-icon" id="refreshMidiBtn" title="Refresh MIDI">↻</button>
+                    </div>
+                    <div class="midi-indicator">
+                        <span class="midi-led out" id="midiOutLed"></span>
+                        <select class="midi-select" id="midiOutSelect">
+                            <option value="">LIGHT MIDI OUT</option>
+                        </select>
+                    </div>
+                    <div class="midi-indicator">
+                        <span class="midi-led out" id="midiOut2Led"></span>
+                        <select class="midi-select" id="midiOut2Select">
+                            <option value="">WING MIDI OUT</option>
+                        </select>
+                    </div>
+                    <div class="midi-indicator">
+                        <span class="midi-led out" id="midiOut3Led"></span>
+                        <select class="midi-select" id="midiOut3Select">
+                            <option value="">PEDAL MIDI OUT</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sequencer-area" id="sequencerArea">
+                <div class="playhead" id="playhead" style="display: none;"></div>
+                <div class="group-bar" id="groupBar" style="position: absolute; left: 0; right: 0; z-index: 10; pointer-events: none;"></div>
+                <div class="grid-container" id="gridContainer"></div>
+                <div class="sequence-status" id="sequenceStatus">Waiting for audio sequence...</div>
+            </div>
+
+            <div class="help-text">
+                Right-click header for time signature • CTRL+SHIFT+Click to select measures • Click color to apply • ALT+Click on empty to add Volume event (green) • SHIFT+Click on event to delete • SHIFT+Click on empty to move playhead • Ctrl+Click to multi-select • Ctrl+C to copy • Ctrl+V to paste • Drag to move • MIDI IN creates events • Audio sequence to start
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <h2 class="modal-title" id="modalTitle">Confirm</h2>
+            <p class="modal-message" id="modalMessage">Are you sure?</p>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="modalCancel">Cancel</button>
+                <button class="btn btn-danger" id="modalConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cc-editor-modal" id="ccEditorModal">
+        <div class="cc-editor-header">
+            <span>Event CC Editor - Wing Pilot - MIDI OUT 2</span>
+        </div>
+        <div class="cc-editor-content" id="ccEditorContent" style="flex-direction: row; gap: 20px;">
+            <div style="flex: 1;">
+                <div class="cc-editor-title">Ch 1 - Volume</div>
+                <div id="ccEditorList"></div>
+            </div>
+            <div style="flex: 1;" id="ccEditorCol2">
+                <div class="cc-editor-title">Ch 2 - Mute</div>
+                <div id="ccEditorList2"></div>
+            </div>
+        </div>
+        <div style="padding: 10px; border-top: 1px solid var(--border-glass);">
+            <div class="cc-editor-title">SYSEX (hex string)</div>
+            <textarea id="sysexInput" style="width: 100%; height: 40px; margin-top: 5px; padding: 5px; border-radius: 4px; border: 1px solid var(--border-glass); background: var(--bg-dark); color: var(--text-primary); font-family: monospace; font-size: 11px;" placeholder="F0 ... F7"></textarea>
+        </div>
+    </div>
+
+    <div class="cc-editor-modal" id="ccVolumeEditorModal">
+        <div class="cc-editor-header">
+            <span>Event CC Editor - Light - MIDI OUT 1</span>
+        </div>
+        <div class="cc-editor-content" style="flex-direction: column; gap: 10px;">
+            <div>
+                <div class="cc-editor-title">Ch 1</div>
+                <div id="ccVolumeEditorList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="cc-editor-modal" id="ccPilotEditorModal">
+        <div class="cc-editor-header">
+            <span>Event CC Editor - Pilot - MIDI OUT 3</span>
+        </div>
+        <div class="cc-editor-content" style="flex-direction: column; gap: 10px;">
+            <div>
+                <div class="cc-editor-title">Ch 1 - FRED</div>
+                <div id="ccPilotEditorList1"></div>
+                <div style="margin-top: 8px;">
+                    <span style="font-size: 11px; color: #aaa;">PC Ch1:</span>
+                    <input type="number" id="pcPilotCh1" min="0" max="127" value="0" style="width: 50px; padding: 4px; border-radius: 4px; border: 1px solid var(--border-glass); background: var(--bg-dark); color: var(--text-primary);">
+                </div>
+            </div>
+            <div>
+                <div class="cc-editor-title">Ch 2 - SEB</div>
+                <div id="ccPilotEditorList2"></div>
+                <div style="margin-top: 8px;">
+                    <span style="font-size: 11px; color: #aaa;">PC Ch2:</span>
+                    <input type="number" id="pcPilotCh2" min="0" max="127" value="0" style="width: 50px; padding: 4px; border-radius: 4px; border: 1px solid var(--border-glass); background: var(--bg-dark); color: var(--text-primary);">
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <div class="context-menu" id="playlistContextMenu">
+        <div class="context-menu-header">Playlist</div>
+        <div class="context-menu-item" id="sortPlaylistBtn">A→Z Sort</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" id="importBtn">Import</div>
+        <div class="context-menu-item" id="exportBtn">Export</div>
+        <div class="context-menu-item" id="loadSongBtn">+ Load Song</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" id="exportPlaylistCsvBtn">Export CSV</div>
+    </div>
+
+    <div class="context-menu" id="measureContextMenu">
+        <div class="context-menu-header">Change Time Signature</div>
+        <div class="context-menu-item" data-beats="2">2/4 (2 beats)</div>
+        <div class="context-menu-item" data-beats="3">3/4 (3 beats)</div>
+        <div class="context-menu-item" data-beats="4">4/4 (4 beats)</div>
+        <div class="context-menu-item" data-beats="5">5/4 (5 beats)</div>
+        <div class="context-menu-item" data-beats="6">6/4 (6 beats)</div>
+        <div class="context-menu-item" data-beats="7">7/4 (7 beats)</div>
+        <div class="context-menu-item" data-beats="8">8/4 (8 beats)</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-header">Subdivision</div>
+        <div class="context-menu-item" data-subdiv="4">4</div>
+        <div class="context-menu-item" data-subdiv="8">8</div>
+        <div class="context-menu-item" data-subdiv="12">12 (3/beat)</div>
+        <div class="context-menu-item" data-subdiv="16">16</div>
+        <div class="context-menu-item" data-subdiv="32">32</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" id="insertMeasureBtn">Insert Measure After</div>
+        <div class="context-menu-item context-menu-danger" id="deleteMeasureBtn">Delete Measure</div>
+    </div>
+
+    <div class="modal-overlay" id="tempoRampModal">
+        <div class="modal-content tempo-ramp-modal">
+            <div class="modal-header">
+                <span>Tempo Ramp</span>
+                <button class="modal-close" id="closeTempoRampModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="tempo-ramp-info">
+                    <span>Measure <span id="rampStartMeasure">1</span></span>
+                    <span class="tempo-arrow">→</span>
+                    <span>Measure <span id="rampEndMeasure">10</span></span>
+                </div>
+                <div class="tempo-ramp-row">
+                    <label>Start Tempo (BPM):</label>
+                    <input type="number" id="rampStartTempo" min="20" max="300" step="1">
+                </div>
+                <div class="tempo-ramp-row">
+                    <label>End Tempo (BPM):</label>
+                    <input type="number" id="rampEndTempo" min="20" max="300" step="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelTempoRamp">Cancel</button>
+                <button class="btn btn-primary" id="applyTempoRamp">Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playClick(frequency = 800, duration = 0.05) {
+            initAudio();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = frequency;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const app = {
+            playlist: [],
+            activeSongId: null,
+            selectedEvent: null,
+            selectedEvents: [],
+            isPlaying: false,
+            currentPosition: 0,
+            playheadManuallySet: false,
+            playbackTimer: null,
+            midiAccess: null,
+            midiInputs: [],
+            midiOutputs: [],
+            selectedMidiOut: null,
+            selectedMidiOut2: null,
+            selectedMidiOut3: null,
+            draggedEvent: null,
+            dragOffset: 0,
+            draggedSong: null,
+            dragOverIndex: null,
+            audioContext: null,
+            audioInput: null,
+            analyser: null,
+            selectedMeasures: [],
+            audioContext: null,
+            copiedEvents: [],
+            undoHistory: [],
+            maxUndoLevels: 10,
+            lastMouseX: 0,
+            lastMouseY: 0,
+            lastShiftClickX: 0,
+            lastShiftClickY: 0,
+            tempoRampStart: null,
+            tempoRampPending: null,
+            tempoRampStartTempo: null,
+            lastBeat: 0,
+            scheduledEventIds: new Set(),
+            lastScheduledMeasure: 0
+        };
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function createSong(name = 'New Song') {
+            const defaultBeats = 4;
+            const measureBeats = [];
+            for (let i = 0; i < 100; i++) {
+                measureBeats.push(defaultBeats);
+            }
+            return {
+                id: generateId(),
+                name: name,
+                bpm: 120,
+                measures: 100,
+                subdivision: 4,
+                measureBeats: measureBeats,
+                measureSubdivisions: measureBeats.map(() => 4),
+                events: [],
+                customGroups: [],
+                tempoRamps: []
+            };
+        }
+
+        function createEvent(measure, subdiv, channel = 1, cc = 0, value = 127, type = 'mute') {
+            const event = {
+                id: generateId(),
+                measure: measure,
+                subdivision: subdiv,
+                channel: channel,
+                type: type,
+                ccs: [
+                    { cc: cc, value: value },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 }
+                ],
+                ccs2: [
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 }
+                ],
+                sysex: ''
+            };
+
+            if (type === 'pilot') {
+                event.name = 'Event CC Editor - Pilot';
+                event.ccs = [
+                    { cc: cc, value: value },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 }
+                ];
+                event.ccs2 = [
+                    { cc: cc, value: value },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 }
+                ];
+                event.pc = 0;
+                event.pc2 = 0;
+            }
+
+            if (type === 'wingPilot') {
+                event.name = 'Event CC Editor - Wing Pilot';
+                event.ccs = [
+                    { cc: cc, value: value },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 }
+                ];
+                event.ccs2 = [
+                    { cc: cc, value: value },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 },
+                    { cc: 0, value: 0 }
+                ];
+            }
+
+            return event;
+        }
+
+        function loadFromStorage() {
+            try {
+                const data = localStorage.getItem('sequencer4_playlist');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    app.playlist = parsed.playlist || [];
+                    app.activeSongId = parsed.activeSongId || null;
+                    if (parsed.startOffset) {
+                        document.getElementById('startOffsetInput').value = parsed.startOffset;
+                    }
+                    
+                    app.playlist.forEach(song => {
+                        if (!song.customGroups) {
+                            song.customGroups = [];
+                        }
+                        if (!song.measureBeats) {
+                            const defaultBeats = 4;
+                            song.measureBeats = [];
+                            for (let i = 0; i < song.measures; i++) {
+                                song.measureBeats.push(defaultBeats);
+                            }
+                        }
+                        if (!song.measureSubdivisions) {
+                            song.measureSubdivisions = [];
+                            for (let i = 0; i < song.measures; i++) {
+                                song.measureSubdivisions.push(song.subdivision || 4);
+                            }
+                        }
+                        if (!song.tempoRamps) {
+                            song.tempoRamps = [];
+                        }
+                        song.events.forEach(event => {
+                            if (!event.ccs) {
+                                event.ccs = [
+                                    { cc: event.cc || 0, value: event.value || 0 },
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 }
+                                ];
+                            }
+                            event.ccs = event.ccs.slice(0, 6);
+                            while (event.ccs.length < 6) {
+                                event.ccs.push({ cc: 0, value: 0 });
+                            }
+                            if (!event.ccs2) {
+                                event.ccs2 = [
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 }
+                                ];
+                            }
+                            event.ccs2 = event.ccs2.slice(0, 6);
+                            while (event.ccs2.length < 6) {
+                                event.ccs2.push({ cc: 0, value: 0 });
+                            }
+                            if (event.sysex === undefined) {
+                                event.sysex = '';
+                            }
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to load from storage:', e);
+            }
+        }
+
+        function saveToStorage() {
+            try {
+                localStorage.setItem('sequencer4_playlist', JSON.stringify({
+                    playlist: app.playlist,
+                    activeSongId: app.activeSongId,
+                    startOffset: document.getElementById('startOffsetInput').value
+                }));
+            } catch (e) {
+                console.error('Failed to save to storage:', e);
+            }
+        }
+
+        function renderPlaylist() {
+            const playlistEl = document.getElementById('playlist');
+            if (app.playlist.length === 0) {
+                playlistEl.innerHTML = '<div class="playlist-empty">No songs. Click "New" to add one.</div>';
+                return;
+            }
+
+            const isLocked = document.getElementById('lockPlaylistCheck').checked;
+            playlistEl.innerHTML = app.playlist.map((song, index) => `
+                <div class="playlist-item ${song.id === app.activeSongId ? 'active' : ''}" 
+                     data-id="${song.id}" draggable="true" data-index="${index}">
+                    <div class="song-name">${isLocked ? (index + 1) + ' - ' : ''}${song.name}</div>
+                    <div class="song-info">${song.bpm} BPM • ${song.measures} measures</div>
+                    <span class="drag-handle">≡</span>
+                    <button class="delete-song-btn" data-song-id="${song.id}">✕</button>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.playlist-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (!e.target.classList.contains('drag-handle') && !e.target.classList.contains('delete-song-btn')) {
+                        selectSong(item.dataset.id);
+                    }
+                });
+
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+
+            document.querySelectorAll('.delete-song-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const songId = btn.dataset.songId;
+                    showConfirmModal('Delete Song', 'Are you sure you want to delete this song?', () => {
+                        deleteSong(songId);
+                    });
+                });
+            });
+        }
+
+        function sortPlaylistAlphabetically() {
+            if (document.getElementById('lockPlaylistCheck').checked) return;
+            if (app.playlist.length === 0) return;
+
+            const activeId = app.activeSongId;
+            app.playlist.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+            saveToStorage();
+            renderPlaylist();
+            if (activeId && app.playlist.find(s => s.id === activeId)) {
+                loadSongToSequencer();
+            }
+        }
+
+        function deleteSong(id) {
+            const index = app.playlist.findIndex(s => s.id === id);
+            if (index === -1) return;
+            
+            app.playlist.splice(index, 1);
+            
+            if (app.activeSongId === id) {
+                app.activeSongId = null;
+            }
+            
+            saveToStorage();
+            renderPlaylist();
+            if (app.activeSongId) {
+                loadSongToSequencer();
+            } else {
+                document.getElementById('gridContainer').innerHTML = '';
+                document.getElementById('songName').value = '';
+                document.getElementById('bpmInput').value = '';
+                document.getElementById('measuresInput').value = '';
+            }
+        }
+
+        function handleDragStart(e) {
+            if (document.getElementById('lockPlaylistCheck').checked) {
+                e.preventDefault();
+                return;
+            }
+            app.draggedSong = parseInt(e.target.dataset.index);
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (document.getElementById('lockPlaylistCheck').checked) {
+                return;
+            }
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e) {
+            if (document.getElementById('lockPlaylistCheck').checked) {
+                return;
+            }
+            e.preventDefault();
+            const targetIndex = parseInt(e.target.closest('.playlist-item').dataset.index);
+            if (app.draggedSong !== null && app.draggedSong !== targetIndex) {
+                const song = app.playlist.splice(app.draggedSong, 1)[0];
+                app.playlist.splice(targetIndex, 0, song);
+                saveToStorage();
+                renderPlaylist();
+            }
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            app.draggedSong = null;
+        }
+
+        function selectSong(id) {
+            if (app.isPlaying) {
+                stopPlayback();
+            }
+            app.activeSongId = id;
+            app.selectedEvent = null;
+            app.sequenceDetected = false;
+            app.audioTimestamps = [];
+            saveToStorage();
+            renderPlaylist();
+            loadSongToSequencer();
+            updateEventDetails();
+            scrollToActiveSong();
+
+            let output = app.selectedMidiOut;
+            if (!output && app.midiAccess) {
+                const outputs = Array.from(app.midiAccess.outputs.values());
+                if (outputs.length > 0) output = outputs[0];
+            }
+            if (output) {
+                const songIndex = app.playlist.findIndex(s => s.id === id);
+                const channel = 1;
+                const pcMessage = [0xC0 + (channel - 1), songIndex];
+                output.send(pcMessage);
+            }
+        }
+
+        function scrollToActiveSong() {
+            const playlistEl = document.getElementById('playlist');
+            const activeItem = playlistEl.querySelector('.playlist-item.active');
+            if (!activeItem) return;
+
+            const itemTop = activeItem.offsetTop;
+            const itemBottom = itemTop + activeItem.offsetHeight;
+            const scrollTop = playlistEl.scrollTop;
+            const scrollHeight = playlistEl.clientHeight;
+
+            if (itemTop < scrollTop) {
+                playlistEl.scrollTop = itemTop;
+            } else if (itemBottom > scrollTop + scrollHeight) {
+                playlistEl.scrollTop = itemBottom - scrollHeight;
+            }
+        }
+
+        function loadSongToSequencer() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+
+            document.getElementById('songName').value = song.name;
+            document.getElementById('bpmInput').value = song.bpm;
+            document.getElementById('measuresInput').value = song.measures;
+            document.getElementById('subdivInput').value = song.subdivision;
+
+            app.selectedMeasures = [];
+
+            const beatsInMeasure1 = song.measureBeats[0] || 4;
+            initBeatLeds(beatsInMeasure1);
+            app.lastBeatLedsCount = beatsInMeasure1;
+
+            renderGrid();
+        }
+
+        function interpolateColor(color1, color2, factor) {
+            const hex = (c) => parseInt(c, 16);
+            const r1 = hex(color1.slice(1, 3));
+            const g1 = hex(color1.slice(3, 5));
+            const b1 = hex(color1.slice(5, 7));
+            const r2 = hex(color2.slice(1, 3));
+            const g2 = hex(color2.slice(3, 5));
+            const b2 = hex(color2.slice(5, 7));
+            const r = Math.round(r1 + (r2 - r1) * factor);
+            const g = Math.round(g1 + (g2 - g1) * factor);
+            const b = Math.round(b1 + (b2 - b1) * factor);
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        }
+
+        function renderGrid() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+
+            const baseBeatWidth = 25;
+            const baseMeasureWidth = baseBeatWidth * 4;
+
+            const gridContainer = document.getElementById('gridContainer');
+            gridContainer.innerHTML = '';
+
+            for (let m = 1; m <= song.measures; m++) {
+                const beatsInMeasure = song.measureBeats[m - 1] || 4;
+                const subdivForMeasure = song.measureSubdivisions[m - 1] || song.subdivision;
+                const subdivPerBeat = subdivForMeasure / 4;
+                const measureWidth = baseBeatWidth * beatsInMeasure * subdivPerBeat;
+                const beatWidth = measureWidth / beatsInMeasure;
+                
+                const customGroup = song.customGroups.find(g => g.measures.includes(m));
+                const isSelected = app.selectedMeasures.includes(m);
+                const isFirstInGroup = customGroup && customGroup.measures[0] === m;
+                
+                const measureEl = document.createElement('div');
+                const isRampStart = app.tempoRampStart === m;
+                const isRampEnd = app.tempoRampPending && app.tempoRampPending.endMeasure === m;
+                const isInRampRange = app.tempoRampStart && app.tempoRampPending && 
+                    m > app.tempoRampStart && m < app.tempoRampPending.endMeasure;
+
+                let rampClass = '';
+                let rampColor = null;
+                let currentRamp = null;
+
+                if (song.tempoRamps) {
+                    currentRamp = song.tempoRamps.find(r => m >= r.startMeasure && m <= r.endMeasure);
+                }
+
+                if (currentRamp) {
+                    const isDecreasing = currentRamp.endTempo < currentRamp.startTempo;
+                    const startColor = isDecreasing ? '#ff9500' : '#30d158';
+                    const endColor = isDecreasing ? '#30d158' : '#ff9500';
+
+                    if (m === currentRamp.startMeasure) {
+                        rampClass = 'tempo-ramp-start';
+                        rampColor = startColor;
+                    } else if (m === currentRamp.endMeasure) {
+                        rampClass = 'tempo-ramp-end';
+                        rampColor = endColor;
+                    } else {
+                        rampClass = 'tempo-ramp-range';
+                        const progress = (m - currentRamp.startMeasure) / (currentRamp.endMeasure - currentRamp.startMeasure);
+                        rampColor = interpolateColor(startColor, endColor, progress);
+                    }
+                } else if (isRampStart && !app.tempoRampPending) {
+                    rampClass = 'tempo-ramp-start';
+                    rampColor = '#30d158';
+                } else if (isRampStart && app.tempoRampPending) {
+                    rampClass = 'tempo-ramp-start-active';
+                    const isDec = app.tempoRampPending.endTempo < app.tempoRampStartTempo;
+                    rampColor = isDec ? '#ff9500' : '#30d158';
+                } else if (isRampEnd) {
+                    rampClass = 'tempo-ramp-end';
+                    const isDec = app.tempoRampPending.endTempo < app.tempoRampStartTempo;
+                    rampColor = isDec ? '#30d158' : '#ff9500';
+                } else if (isInRampRange) {
+                    rampClass = 'tempo-ramp-range';
+                    const progress = (m - app.tempoRampStart) / (app.tempoRampPending.endMeasure - app.tempoRampStart);
+                    const isDecreasing = app.tempoRampPending.endTempo < app.tempoRampStartTempo;
+                    const startColor = isDecreasing ? '#ff9500' : '#30d158';
+                    const endColor = isDecreasing ? '#30d158' : '#ff9500';
+                    rampColor = interpolateColor(startColor, endColor, progress);
+                }
+                
+                measureEl.className = `measure ${app.isPlaying && Math.floor(app.currentPosition) === m ? 'playing' : ''} ${isSelected ? 'measure-selected' : ''} ${customGroup ? 'measure-grouped' : ''} ${rampClass}`;
+                if (rampColor) {
+                    measureEl.style.boxShadow = `inset 0 -4px 0 0 ${rampColor}`;
+                }
+                if (customGroup) {
+                    measureEl.style.background = customGroup.color + '40';
+                } else {
+                    measureEl.style.background = 'rgba(180, 180, 200, 0.25)';
+                }
+                measureEl.dataset.measure = m;
+                measureEl.dataset.group = customGroup ? customGroup.id : '';
+                measureEl.style.width = `${measureWidth}px`;
+                measureEl.style.minWidth = `${measureWidth}px`;
+
+                const header = document.createElement('div');
+                header.className = `measure-header ${isSelected ? 'measure-selected' : ''} ${customGroup ? 'measure-grouped' : ''}`;
+                if (customGroup && isFirstInGroup) {
+                    header.style.background = customGroup.color + 'cc';
+                    header.style.color = 'white';
+                    header.textContent = `${customGroup.name} (${beatsInMeasure}/4)`;
+                } else if (customGroup) {
+                    header.style.background = customGroup.color + '99';
+                    header.style.color = 'white';
+                    header.textContent = `${beatsInMeasure}/4`;
+                } else if (isSelected) {
+                    header.style.background = 'rgba(0, 170, 255, 0.8)';
+                    header.style.color = 'white';
+                    header.textContent = `${beatsInMeasure}/4`;
+                } else {
+                    header.style.background = 'rgba(100, 100, 120, 0.9)';
+                    header.style.color = 'rgba(20, 20, 30, 0.9)';
+                    header.textContent = `${beatsInMeasure}/4`;
+                }
+                header.style.cursor = 'pointer';
+                header.addEventListener('click', (e) => {
+                    if (e.ctrlKey && e.shiftKey) {
+                        e.stopPropagation();
+                        toggleMeasureSelection(m);
+                        const nameInput = document.getElementById('groupNameInput');
+                        const group = song.customGroups.find(g => g.measures.includes(m));
+                        if (group) {
+                            nameInput.value = group.name;
+                        }
+                    } else if (e.shiftKey) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    }
+                });
+                measureEl.appendChild(header);
+
+                const beatsContainer = document.createElement('div');
+                beatsContainer.className = 'beats-container';
+
+                for (let beat = 1; beat <= beatsInMeasure; beat++) {
+                    const beatEl = document.createElement('div');
+                    beatEl.className = 'beat';
+                    beatEl.style.width = `${beatWidth}px`;
+
+                    const beatNum = document.createElement('div');
+                    beatNum.className = 'beat-number';
+                    beatNum.textContent = beat;
+                    beatEl.appendChild(beatNum);
+
+                    if (subdivPerBeat > 1) {
+                        const subdivContainer = document.createElement('div');
+                        subdivContainer.className = 'beat-subdivisions';
+                        for (let s = 1; s <= subdivPerBeat; s++) {
+                            const subdivEl = document.createElement('div');
+                            subdivEl.className = 'subdivision';
+                            subdivEl.dataset.beat = beat;
+                            subdivEl.dataset.subdiv = s;
+                            subdivContainer.appendChild(subdivEl);
+                        }
+                        beatEl.appendChild(subdivContainer);
+                    }
+
+                    beatsContainer.appendChild(beatEl);
+                }
+
+                measureEl.appendChild(beatsContainer);
+
+                song.events.filter(e => e.measure === m).forEach(event => {
+                    const eventEl = document.createElement('div');
+                    let eventClass = 'event';
+                    if (event.type === 'volume') eventClass += ' volume';
+                    else if (event.type === 'pilot') eventClass += ' pilot';
+                    eventClass += app.selectedEvents.includes(event.id) ? ' selected' : '';
+                    eventEl.className = eventClass;
+                    eventEl.dataset.eventId = event.id;
+
+                    const beat = Math.ceil(event.subdivision / subdivPerBeat);
+                    const subPos = ((event.subdivision - 1) % subdivPerBeat);
+                    eventEl.style.left = `${(beat - 1) * beatWidth + (subPos * (beatWidth / subdivPerBeat)) + 2}px`;
+                    eventEl.style.width = `${(beatWidth / subdivPerBeat) - 4}px`;
+                    eventEl.style.top = '28px';
+                    eventEl.style.height = '60px';
+                    eventEl.innerHTML = event.ccs.map((c, i) => `<span class="event-label">${c.cc}</span>`).join('');
+                    eventEl.title = `Ch${event.channel} CCs: ${event.ccs.map(c => `${c.cc}:${c.value}`).join(', ')}`;
+
+                    eventEl.addEventListener('mousedown', (e) => handleEventMouseDown(e, event));
+                    eventEl.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (e.ctrlKey) {
+                            toggleEventSelection(event.id);
+                        } else {
+                            selectEvent(event.id);
+                        }
+                    });
+
+                    measureEl.appendChild(eventEl);
+                });
+
+                if (song.tempoRamps) {
+                    song.tempoRamps.forEach(ramp => {
+                        const isDecreasing = ramp.endTempo < ramp.startTempo;
+                        const startColor = isDecreasing ? '#ff9500' : '#30d158';
+                        const endColor = isDecreasing ? '#30d158' : '#ff9500';
+
+                        if (m === ramp.startMeasure) {
+                            const badge = document.createElement('div');
+                            badge.className = 'tempo-ramp-badge start editable';
+                            badge.textContent = `${ramp.startTempo}→`;
+                            badge.style.position = 'absolute';
+                            badge.style.top = '2px';
+                            badge.style.right = '4px';
+                            badge.style.fontSize = '8px';
+                            badge.style.padding = '1px 4px';
+                            badge.style.borderRadius = '3px';
+                            badge.style.background = startColor;
+                            badge.style.color = '#004400';
+                            badge.style.zIndex = '5';
+                            badge.style.pointerEvents = 'auto';
+                            badge.style.cursor = 'pointer';
+                            badge.dataset.rampIndex = song.tempoRamps.indexOf(ramp);
+                            badge.dataset.type = 'start';
+                            badge.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const rampIndex = parseInt(badge.dataset.rampIndex);
+                                const ramp = song.tempoRamps[rampIndex];
+                                if (ramp) {
+                                    const newTempo = prompt('Enter start tempo (BPM):', ramp.startTempo);
+                                    if (newTempo !== null) {
+                                        const parsed = parseInt(newTempo);
+                                        if (parsed >= 20 && parsed <= 300) {
+                                            ramp.startTempo = parsed;
+                                            saveToStorage();
+                                            renderGrid();
+                                        }
+                                    }
+                                }
+                            });
+                            measureEl.appendChild(badge);
+                        }
+                        if (m === ramp.endMeasure) {
+                            const badge = document.createElement('div');
+                            badge.className = 'tempo-ramp-badge end editable';
+                            badge.textContent = `→${ramp.endTempo}`;
+                            badge.style.position = 'absolute';
+                            badge.style.top = '2px';
+                            badge.style.right = '4px';
+                            badge.style.fontSize = '8px';
+                            badge.style.padding = '1px 4px';
+                            badge.style.borderRadius = '3px';
+                            badge.style.background = endColor;
+                            badge.style.color = '#004400';
+                            badge.style.zIndex = '5';
+                            badge.style.pointerEvents = 'auto';
+                            badge.style.cursor = 'pointer';
+                            badge.dataset.rampIndex = song.tempoRamps.indexOf(ramp);
+                            badge.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const rampIndex = parseInt(badge.dataset.rampIndex);
+                                const ramp = song.tempoRamps[rampIndex];
+                                if (ramp) {
+                                    const newTempo = prompt('Enter end tempo (BPM):', ramp.endTempo);
+                                    if (newTempo !== null) {
+                                        const parsed = parseInt(newTempo);
+                                        if (parsed >= 20 && parsed <= 300) {
+                                            ramp.endTempo = parsed;
+                                            saveToStorage();
+                                            renderGrid();
+                                        }
+                                    }
+                                }
+                            });
+                            measureEl.appendChild(badge);
+                        }
+                    });
+                }
+
+                gridContainer.appendChild(measureEl);
+            }
+
+            updatePlayhead();
+        }
+
+        function handleEventMouseDown(e, event) {
+            if (e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                deleteEvent(event.id);
+                return;
+            }
+
+            if (e.button === 0) {
+                if (e.ctrlKey) {
+                    toggleEventSelection(event.id);
+                } else {
+                    selectEvent(event.id);
+                }
+                app.draggedEvent = event;
+                const rect = e.target.getBoundingClientRect();
+                app.dragOffset = e.clientX - rect.left;
+                
+                document.addEventListener('mousemove', handleEventDrag);
+                document.addEventListener('mouseup', handleEventDragEnd);
+            }
+        }
+
+        function handleEventDrag(e) {
+            if (!app.draggedEvent) return;
+            
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+
+            const measureEl = document.elementFromPoint(e.clientX, e.clientY);
+            if (!measureEl) return;
+            
+            const measureDiv = measureEl.closest('.measure');
+            if (!measureDiv) return;
+            
+            const newMeasure = parseInt(measureDiv.dataset.measure);
+            if (isNaN(newMeasure)) return;
+
+            const subdivForMeasure = song.measureSubdivisions[newMeasure - 1] || song.subdivision;
+            const subdivPerBeat = subdivForMeasure / 4;
+            const baseBeatWidth = 25;
+            const subdivFactor = subdivPerBeat;
+            const beatsInMeasure = song.measureBeats[newMeasure - 1] || 4;
+            const measureWidth = baseBeatWidth * beatsInMeasure * subdivFactor;
+            const beatWidth = measureWidth / beatsInMeasure;
+
+            const rect = measureDiv.getBoundingClientRect();
+            const xInMeasure = e.clientX - rect.left;
+            const beat = Math.max(1, Math.min(beatsInMeasure, Math.floor(xInMeasure / beatWidth) + 1));
+            const xInBeat = xInMeasure - (beat - 1) * beatWidth;
+            const subPos = Math.max(1, Math.floor(xInBeat / (beatWidth / subdivPerBeat)) + 1);
+
+            const newSubdiv = (beat - 1) * subdivPerBeat + subPos;
+
+            app.draggedEvent.measure = newMeasure;
+            app.draggedEvent.subdivision = Math.max(1, Math.min(subdivForMeasure, newSubdiv));
+            renderGrid();
+        }
+
+        function handleEventDragEnd() {
+            app.draggedEvent = null;
+            document.removeEventListener('mousemove', handleEventDrag);
+            document.removeEventListener('mouseup', handleEventDragEnd);
+            saveToStorage();
+        }
+
+        function selectEvent(id) {
+            app.selectedEvent = id;
+            app.selectedEvents = [id];
+            updateEventDetails();
+            renderGrid();
+        }
+
+        function toggleEventSelection(id) {
+            const index = app.selectedEvents.indexOf(id);
+            if (index >= 0) {
+                app.selectedEvents.splice(index, 1);
+                app.selectedEvent = app.selectedEvents.length > 0 ? app.selectedEvents[app.selectedEvents.length - 1] : null;
+            } else {
+                app.selectedEvents.push(id);
+                app.selectedEvent = id;
+            }
+            renderGrid();
+        }
+
+        function toggleMeasureSelection(measureNum) {
+            const index = app.selectedMeasures.indexOf(measureNum);
+            if (index >= 0) {
+                app.selectedMeasures.splice(index, 1);
+            } else {
+                app.selectedMeasures.push(measureNum);
+            }
+            app.selectedMeasures.sort((a, b) => a - b);
+            updateSelectedMeasuresDisplay();
+            renderGrid();
+        }
+
+        function updateSelectedMeasuresDisplay() {
+            const display = document.getElementById('selectedMeasuresDisplay');
+            if (display) {
+                if (app.selectedMeasures.length === 0) {
+                    display.textContent = '-';
+                } else if (app.selectedMeasures.length === 1) {
+                    display.textContent = `M${app.selectedMeasures[0]}`;
+                } else {
+                    const first = app.selectedMeasures[0];
+                    const last = app.selectedMeasures[app.selectedMeasures.length - 1];
+                    if (last === first + app.selectedMeasures.length - 1) {
+                        display.textContent = `M${first}-${last}`;
+                    } else {
+                        display.textContent = app.selectedMeasures.map(m => `M${m}`).join(',');
+                    }
+                }
+            }
+        }
+
+        function applyGroupColor(color) {
+            if (app.selectedMeasures.length === 0) return;
+            
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+            
+            const nameInput = document.getElementById('groupNameInput');
+            
+            const firstSelectedMeasure = app.selectedMeasures[0];
+            const existingGroup = song.customGroups.find(g => g.measures.includes(firstSelectedMeasure));
+            const inputName = nameInput.value.trim();
+            
+            if (existingGroup) {
+                const newMeasures = app.selectedMeasures.filter(m => !existingGroup.measures.includes(m));
+                existingGroup.measures = [...existingGroup.measures, ...newMeasures].sort((a, b) => a - b);
+                existingGroup.color = color;
+                if (inputName) {
+                    existingGroup.name = inputName;
+                }
+            } else {
+                const groupName = inputName || `G${color.slice(1, 3).toUpperCase()}`;
+                const groupId = groupName.charAt(0).toUpperCase() + Date.now().toString(36);
+                
+                song.customGroups.push({
+                    id: groupId,
+                    name: groupName,
+                    color: color,
+                    measures: [...app.selectedMeasures].sort((a, b) => a - b)
+                });
+            }
+            
+            nameInput.value = '';
+            app.selectedMeasures = [];
+            updateSelectedMeasuresDisplay();
+            saveToStorage();
+            renderGrid();
+        }
+
+        function updateEventDetails() {
+            const eventDetails = document.getElementById('eventDetails');
+            const ccEditorModal = document.getElementById('ccEditorModal');
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            const event = song ? song.events.find(e => e.id === app.selectedEvent) : null;
+
+            if (event) {
+                if (ccEditorModal) ccEditorModal.classList.remove('visible');
+                const volModal = document.getElementById('ccVolumeEditorModal');
+                if (volModal) volModal.classList.remove('visible');
+                const pilotModal = document.getElementById('ccPilotEditorModal');
+                if (pilotModal) pilotModal.classList.remove('visible');
+                
+                eventDetails.classList.remove('hidden');
+                document.getElementById('eventChannel').value = event.channel;
+                document.getElementById('eventCC').value = event.ccs[0] ? event.ccs[0].cc : 0;
+                document.getElementById('eventValue').value = event.ccs[0] ? event.ccs[0].value : 0;
+                
+                if (event.type === 'volume') {
+                    if (volModal) {
+                        volModal.classList.add('visible');
+                        renderCcVolumeEditorList(event);
+                    }
+                } else if (event.type === 'pilot') {
+                    if (pilotModal) {
+                        pilotModal.classList.add('visible');
+                        renderCcPilotEditorList(event);
+                    }
+                } else if (event.type === 'wingPilot') {
+                    if (ccEditorModal) {
+                        ccEditorModal.classList.add('visible');
+                        renderCcEditorList(event);
+                    }
+                } else {
+                    if (ccEditorModal) {
+                        ccEditorModal.classList.add('visible');
+                        renderCcEditorList(event);
+                    }
+                }
+            } else {
+                eventDetails.classList.add('hidden');
+                if (ccEditorModal) {
+                    ccEditorModal.classList.remove('visible');
+                }
+                const volModal = document.getElementById('ccVolumeEditorModal');
+                if (volModal) {
+                    volModal.classList.remove('visible');
+                }
+            }
+        }
+
+        function renderCcEditorList(event) {
+            const list = document.getElementById('ccEditorList');
+            const list2 = document.getElementById('ccEditorList2');
+            
+            list.innerHTML = event.ccs.map((c, i) => `
+                <div class="cc-editor-item">
+                    <span>${i + 1}</span>
+                    <input type="number" class="control-input event-detail-input cc-input" data-index="${i}" data-field="cc" data-list="ccs" min="0" max="127" value="${c.cc}">
+                    <input type="number" class="control-input event-detail-input cc-input" data-index="${i}" data-field="value" data-list="ccs" min="0" max="127" value="${c.value}">
+                </div>
+            `).join('');
+            
+            if (!event.ccs2) {
+                event.ccs2 = Array.from({length: 6}, () => ({cc: 0, value: 0}));
+            }
+            list2.innerHTML = event.ccs2.map((c, i) => `
+                <div class="cc-editor-item">
+                    <span>${i + 1}</span>
+                    <input type="number" class="control-input event-detail-input cc2-input" data-index="${i}" data-field="cc" data-list="ccs2" min="0" max="127" value="${c.cc}">
+                    <input type="number" class="control-input event-detail-input cc2-input" data-index="${i}" data-field="value" data-list="ccs2" min="0" max="127" value="${c.value}">
+                </div>
+            `).join('');
+            
+            const sysexInput = document.getElementById('sysexInput');
+            if (sysexInput) {
+                sysexInput.value = event.sysex || '';
+            }
+            
+            document.querySelectorAll('#ccEditorModal input').forEach(input => {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        saveCcEditor();
+                        document.getElementById('ccEditorModal').classList.remove('visible');
+                    }
+                });
+            });
+            
+            if (sysexInput) {
+                sysexInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        saveCcEditor();
+                        document.getElementById('ccEditorModal').classList.remove('visible');
+                    }
+                });
+            }
+        }
+
+        function renderCcVolumeEditorList(event) {
+            const list = document.getElementById('ccVolumeEditorList');
+            list.innerHTML = event.ccs.map((c, i) => `
+                <div class="cc-editor-item">
+                    <span>${i + 1}</span>
+                    <input type="number" class="control-input event-detail-input cc-volume-input" data-index="${i}" data-field="cc" data-list="ccs" min="0" max="127" value="${c.cc}">
+                    <input type="number" class="control-input event-detail-input cc-volume-input" data-index="${i}" data-field="value" data-list="ccs" min="0" max="127" value="${c.value}">
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('#ccVolumeEditorModal input').forEach(input => {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        saveCcVolumeEditor();
+                        document.getElementById('ccVolumeEditorModal').classList.remove('visible');
+                    }
+                });
+            });
+        }
+
+        function renderCcPilotEditorList(event) {
+            const list1 = document.getElementById('ccPilotEditorList1');
+            const list2 = document.getElementById('ccPilotEditorList2');
+            
+            if (!event.ccs2) {
+                event.ccs2 = [{cc: 0, value: 0}];
+            }
+            
+            list1.innerHTML = `
+                <div class="cc-editor-item">
+                    <span>1</span>
+                    <input type="number" class="control-input event-detail-input cc-pilot-ch1-input" data-field="cc" min="0" max="127" value="${event.ccs[0] ? event.ccs[0].cc : 0}">
+                    <input type="number" class="control-input event-detail-input cc-pilot-ch1-input" data-field="value" min="0" max="127" value="${event.ccs[0] ? event.ccs[0].value : 0}">
+                </div>
+            `;
+            
+            list2.innerHTML = `
+                <div class="cc-editor-item">
+                    <span>1</span>
+                    <input type="number" class="control-input event-detail-input cc-pilot-ch2-input" data-field="cc" min="0" max="127" value="${event.ccs2[0] ? event.ccs2[0].cc : 0}">
+                    <input type="number" class="control-input event-detail-input cc-pilot-ch2-input" data-field="value" min="0" max="127" value="${event.ccs2[0] ? event.ccs2[0].value : 0}">
+                </div>
+            `;
+            
+            const pcCh1Input = document.getElementById('pcPilotCh1');
+            const pcCh2Input = document.getElementById('pcPilotCh2');
+            if (pcCh1Input) pcCh1Input.value = event.pc || 0;
+            if (pcCh2Input) pcCh2Input.value = event.pc2 || 0;
+            
+            document.querySelectorAll('#ccPilotEditorModal input').forEach(input => {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        saveCcPilotEditor();
+                        document.getElementById('ccPilotEditorModal').classList.remove('visible');
+                    }
+                });
+            });
+        }
+
+        function saveCcPilotEditor() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song || !app.selectedEvent) return;
+            
+            const event = song.events.find(e => e.id === app.selectedEvent);
+            if (!event || event.type !== 'pilot') return;
+            
+            const ch1Cc = document.querySelector('.cc-pilot-ch1-input[data-field="cc"]');
+            const ch1Value = document.querySelector('.cc-pilot-ch1-input[data-field="value"]');
+            const ch2Cc = document.querySelector('.cc-pilot-ch2-input[data-field="cc"]');
+            const ch2Value = document.querySelector('.cc-pilot-ch2-input[data-field="value"]');
+            const pcCh1Input = document.getElementById('pcPilotCh1');
+            const pcCh2Input = document.getElementById('pcPilotCh2');
+            
+            if (ch1Cc) event.ccs[0].cc = parseInt(ch1Cc.value) || 0;
+            if (ch1Value) event.ccs[0].value = parseInt(ch1Value.value) || 0;
+            if (ch2Cc) event.ccs2[0].cc = parseInt(ch2Cc.value) || 0;
+            if (ch2Value) event.ccs2[0].value = parseInt(ch2Value.value) || 0;
+            if (pcCh1Input) event.pc = parseInt(pcCh1Input.value) || 0;
+            if (pcCh2Input) event.pc2 = parseInt(pcCh2Input.value) || 0;
+            
+            saveToStorage();
+            renderGrid();
+        }
+
+        function saveCcEditor() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song || !app.selectedEvent) return;
+            
+            const event = song.events.find(e => e.id === app.selectedEvent);
+            if (!event) return;
+            
+            document.querySelectorAll('.cc-input').forEach(input => {
+                const index = parseInt(input.dataset.index);
+                const field = input.dataset.field;
+                event.ccs[index][field] = parseInt(input.value) || 0;
+            });
+
+            document.querySelectorAll('.cc2-input').forEach(input => {
+                const index = parseInt(input.dataset.index);
+                const field = input.dataset.field;
+                if (!event.ccs2) event.ccs2 = [];
+                event.ccs2[index] = event.ccs2[index] || {cc: 0, value: 0};
+                event.ccs2[index][field] = parseInt(input.value) || 0;
+            });
+            
+            const sysexInput = document.getElementById('sysexInput');
+            if (sysexInput) {
+                event.sysex = sysexInput.value.trim();
+            }
+            
+            saveToStorage();
+            renderGrid();
+        }
+
+        function saveCcVolumeEditor() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song || !app.selectedEvent) return;
+            
+            const event = song.events.find(e => e.id === app.selectedEvent);
+            if (!event || event.type !== 'volume') return;
+            
+            document.querySelectorAll('.cc-volume-input').forEach(input => {
+                const index = parseInt(input.dataset.index);
+                const field = input.dataset.field;
+                event.ccs[index][field] = parseInt(input.value) || 0;
+            });
+            
+            saveToStorage();
+            renderGrid();
+        }
+
+        function deleteEvent(id) {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+            song.events = song.events.filter(e => e.id !== id);
+            if (app.selectedEvent === id) {
+                app.selectedEvent = null;
+                updateEventDetails();
+            }
+            saveToStorage();
+            renderGrid();
+        }
+
+        function addEventAtPosition(measure, subdiv, type = 'mute') {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+            
+            const channel = parseInt(document.getElementById('eventChannel').value) || 1;
+            const cc = parseInt(document.getElementById('eventCC').value) || 0;
+            const value = parseInt(document.getElementById('eventValue').value) || 127;
+            
+            const event = createEvent(measure, subdiv, channel, cc, value, type);
+            song.events.push(event);
+            saveToStorage();
+            renderGrid();
+            selectEvent(event.id);
+        }
+
+        function handleGridClick(e) {
+            app.lastMouseX = e.clientX;
+            app.lastMouseY = e.clientY;
+            
+            if (e.target.closest('.event')) return;
+            
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+
+            const measureEl = document.elementFromPoint(e.clientX, e.clientY);
+            if (!measureEl) return;
+            
+            const measureDiv = measureEl.closest('.measure');
+            if (!measureDiv) return;
+            
+            const measure = parseInt(measureDiv.dataset.measure);
+            if (isNaN(measure)) return;
+
+            const subdivForMeasure = song.measureSubdivisions[measure - 1] || song.subdivision;
+            const subdivPerBeat = subdivForMeasure / 4;
+            const baseBeatWidth = 25;
+
+            const beatsInMeasure = song.measureBeats[measure - 1] || 4;
+            const measureWidth = baseBeatWidth * beatsInMeasure * subdivPerBeat;
+            const beatWidth = measureWidth / beatsInMeasure;
+
+            const rect = measureDiv.getBoundingClientRect();
+            const xInMeasure = e.clientX - rect.left;
+            const beat = Math.max(1, Math.min(beatsInMeasure, Math.floor(xInMeasure / beatWidth) + 1));
+            const xInBeat = xInMeasure - (beat - 1) * beatWidth;
+            const subPos = Math.max(1, Math.floor(xInBeat / (beatWidth / subdivPerBeat)) + 1);
+
+            const subdivPos = (beat - 1) * subdivPerBeat + subPos;
+            
+            if (e.altKey) {
+                if (e.button === 0) {
+                    addEventAtPosition(measure, subdivPos, 'volume');
+                } else if (e.button === 1) {
+                    addEventAtPosition(measure, subdivPos, 'pilot');
+                } else if (e.button === 2) {
+                    addEventAtPosition(measure, subdivPos, 'wingPilot');
+                }
+            } else {
+                app.lastShiftClickX = e.clientX;
+                app.lastShiftClickY = e.clientY;
+                const totalSubdivs = subdivForMeasure;
+                app.currentPosition = measure + (subdivPos - 1) / totalSubdivs;
+                app.playheadManuallySet = true;
+                updatePlayhead();
+            }
+        }
+
+        function copyEvent() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song || app.selectedEvents.length === 0) return;
+            
+            app.copiedEvents = app.selectedEvents.map(id => {
+                const event = song.events.find(e => e.id === id);
+                return event ? JSON.parse(JSON.stringify(event)) : null;
+            }).filter(e => e !== null);
+        }
+
+        function pasteEvent(measure, subdiv) {
+            if (!app.copiedEvents || app.copiedEvents.length === 0) return;
+            
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+            
+            const firstEvent = app.copiedEvents[0];
+            const measureOffset = measure - firstEvent.measure;
+            const subdivOffset = subdiv - firstEvent.subdivision;
+            
+            const newEventIds = [];
+            app.copiedEvents.forEach(event => {
+                const newEvent = {
+                    id: generateId(),
+                    measure: event.measure + measureOffset,
+                    subdivision: event.subdivision + subdivOffset,
+                    channel: event.channel,
+                    type: event.type || 'mute',
+                    ccs: JSON.parse(JSON.stringify(event.ccs)),
+                    ccs2: event.ccs2 ? JSON.parse(JSON.stringify(event.ccs2)) : null
+                };
+                song.events.push(newEvent);
+                newEventIds.push(newEvent.id);
+            });
+            
+            app.undoHistory.push({ eventIds: newEventIds });
+            if (app.undoHistory.length > app.maxUndoLevels) {
+                app.undoHistory.shift();
+            }
+            
+            saveToStorage();
+            renderGrid();
+            if (newEventIds.length > 0) {
+                app.selectedEvents = newEventIds;
+                app.selectedEvent = newEventIds[0];
+                updateEventDetails();
+            }
+        }
+
+        function undoPaste() {
+            if (app.undoHistory.length === 0) return;
+            
+            const lastAction = app.undoHistory.pop();
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+            
+            lastAction.eventIds.forEach(id => {
+                song.events = song.events.filter(e => e.id !== id);
+            });
+            
+            saveToStorage();
+            renderGrid();
+            app.selectedEvents = [];
+            app.selectedEvent = null;
+            updateEventDetails();
+        }
+
+        function pasteEventAtPlayhead() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+
+            const position = app.currentPosition > 0 ? app.currentPosition : 1;
+            const measure = Math.floor(position);
+            const subdivForMeasure = song.measureSubdivisions[measure - 1] || song.subdivision;
+            const subdiv = Math.floor(((position % 1) * subdivForMeasure)) + 1;
+            
+            pasteEvent(measure, subdiv);
+        }
+
+        function pasteEventAtMousePosition() {
+if (!app.copiedEvents || app.copiedEvents.length === 0) return;
+            
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+
+            const baseBeatWidth = 25;
+
+            const measureEl = document.elementFromPoint(app.lastMouseX, app.lastMouseY);
+            if (!measureEl) return;
+            
+            const measureDiv = measureEl.closest('.measure');
+            if (!measureDiv) return;
+
+            const measure = parseInt(measureDiv.dataset.measure);
+            if (isNaN(measure)) return;
+
+            const subdivForMeasure = song.measureSubdivisions[measure - 1] || song.subdivision;
+            const subdivPerBeat = subdivForMeasure / 4;
+            const beatsInMeasure = song.measureBeats[measure - 1] || 4;
+            const measureWidth = baseBeatWidth * beatsInMeasure * subdivPerBeat;
+            const beatWidth = measureWidth / beatsInMeasure;
+
+            const rect = measureDiv.getBoundingClientRect();
+            const xInMeasure = app.lastMouseX - rect.left;
+            const beat = Math.max(1, Math.min(beatsInMeasure, Math.floor(xInMeasure / beatWidth) + 1));
+            const xInBeat = xInMeasure - (beat - 1) * beatWidth;
+            const subPos = Math.max(1, Math.floor(xInBeat / (beatWidth / subdivPerBeat)) + 1);
+
+            const subdivPos = (beat - 1) * subdivPerBeat + subPos;
+            
+            pasteEvent(measure, subdivPos);
+        }
+
+        function updatePlayhead() {
+            const playhead = document.getElementById('playhead');
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) {
+                playhead.style.display = 'none';
+                return;
+            }
+
+            const currentPosition = app.isPlaying ? app.currentPosition : (app.currentPosition > 0 ? app.currentPosition : 1);
+            const currentMeasure = Math.max(1, Math.floor(currentPosition));
+            const beatsInMeasure = song.measureBeats[currentMeasure - 1] || 4;
+            const subdivForMeasure = song.measureSubdivisions[currentMeasure - 1] || song.subdivision;
+            const subdivPerBeat = subdivForMeasure / 4;
+            const baseBeatWidth = 25;
+            const subdivFactor = subdivPerBeat;
+            const measureWidth = baseBeatWidth * beatsInMeasure * subdivFactor;
+            const beatWidth = measureWidth / beatsInMeasure;
+
+            const currentBeat = Math.floor((currentPosition % 1) * beatsInMeasure) + 1;
+            const positionInMeasure = (currentPosition % 1) * measureWidth;
+
+            const measureEl = document.querySelector(`.measure[data-measure="${currentMeasure}"]`);
+            if (!measureEl) {
+                playhead.style.display = 'none';
+                return;
+            }
+
+            const sequencerArea = document.getElementById('sequencerArea');
+            const sequencerRect = sequencerArea.getBoundingClientRect();
+            const measureRect = measureEl.getBoundingClientRect();
+
+            const x = measureRect.left - sequencerRect.left + positionInMeasure;
+            const y = measureEl.offsetTop + 28;
+
+            playhead.style.display = 'block';
+            playhead.style.left = `${x}px`;
+            playhead.style.top = `${y}px`;
+            playhead.style.width = '2px';
+            playhead.style.height = '50px';
+
+            playhead.classList.remove('beat-1', 'beat-other');
+            if (currentBeat === 1) {
+                playhead.classList.add('beat-1');
+            } else {
+                playhead.classList.add('beat-other');
+            }
+
+            if (app.isPlaying) {
+                playhead.classList.add('playing');
+                const viewHeight = sequencerArea.clientHeight;
+                const measureTop = measureEl.offsetTop;
+                const measureHeight = measureEl.offsetHeight || 65;
+                const measureBottom = measureTop + measureHeight;
+                const scrollThreshold = 80;
+                let needsScroll = false;
+                let newScrollTop = sequencerArea.scrollTop;
+
+                if (measureBottom > sequencerArea.scrollTop + viewHeight - scrollThreshold) {
+                    newScrollTop = measureBottom - viewHeight + scrollThreshold;
+                    needsScroll = true;
+                } else if (measureTop < sequencerArea.scrollTop + scrollThreshold) {
+                    newScrollTop = Math.max(0, measureTop - scrollThreshold);
+                    needsScroll = true;
+                }
+
+                if (needsScroll) {
+                    sequencerArea.scrollTop = newScrollTop;
+                    playhead.style.top = `${measureEl.offsetTop + 28}px`;
+                }
+            } else {
+                playhead.classList.remove('playing');
+            }
+        }
+
+        function getBeatInterval() {
+            const bpm = parseFloat(document.getElementById('bpmInput').value) || 120;
+            return 60000 / bpm;
+        }
+
+        function getSubdivInterval() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return getBeatInterval() / 4;
+            const measure = Math.floor(app.currentPosition) || 1;
+            const subdivForMeasure = song.measureSubdivisions[measure - 1] || song.subdivision;
+            return getBeatInterval() / subdivForMeasure;
+        }
+
+        function updateBeatLeds(currentBeat) {
+            const leds = document.querySelectorAll('.beat-led');
+            leds.forEach((led, i) => {
+                if (i + 1 === currentBeat) {
+                    led.classList.add('active');
+                } else {
+                    led.classList.remove('active');
+                }
+            });
+        }
+
+        function initBeatLeds(beatsInMeasure) {
+            const container = document.getElementById('beatLeds');
+            container.innerHTML = '';
+            for (let i = 1; i <= beatsInMeasure; i++) {
+                const led = document.createElement('div');
+                led.className = `beat-led ${i === 1 ? 'beat-1' : ''}`;
+                container.appendChild(led);
+            }
+        }
+
+        function startPlayback() {
+            if (app.isPlaying) {
+                return;
+            }
+            
+            initAudio();
+            const startFromManuallySetPosition = app.playheadManuallySet && app.currentPosition > 1;
+            if (!startFromManuallySetPosition) {
+                app.currentPosition = 1;
+            }
+            app.playheadManuallySet = false;
+            app.sequenceDetected = false;
+            
+            const beatInterval = getBeatInterval();
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            const startMeasure = Math.floor(app.currentPosition);
+            
+            let startOffset = 0;
+            for (let m = 1; m < startMeasure; m++) {
+                const beatsInMeasure = song ? (song.measureBeats[m - 1] || 4) : 4;
+                startOffset += beatInterval * beatsInMeasure;
+            }
+            
+            const extraOffset = parseInt(document.getElementById('startOffsetInput').value) || 0;
+            
+            document.getElementById('playBtn').classList.add('playing');
+            document.getElementById('playBtn').textContent = '⏸';
+            document.getElementById('playLed').classList.add('active');
+            
+            if (extraOffset > 0) {
+                setTimeout(() => {
+                    app.isPlaying = true;
+                    app.playbackStartTime = performance.now() - startOffset;
+                    app.lastScheduledMeasure = 0;
+                    app.lastLedUpdateMeasure = 0;
+                    app.scheduledEventIds = new Set();
+                    if (song) {
+                        const startTempo = getTempoForPosition(song, startMeasure);
+                        scheduleEventsInMeasure(song, startMeasure, performance.now(), app.playbackStartTime, startTempo);
+                        app.lastScheduledMeasure = startMeasure;
+                    }
+                    playbackLoop();
+                }, extraOffset);
+            } else {
+                app.isPlaying = true;
+                app.playbackStartTime = performance.now() - startOffset;
+                app.lastScheduledMeasure = 0;
+                app.lastLedUpdateMeasure = 0;
+                app.scheduledEventIds = new Set();
+                if (song) {
+                    const startTempo = getTempoForPosition(song, startMeasure);
+                    scheduleEventsInMeasure(song, startMeasure, performance.now(), app.playbackStartTime, startTempo);
+                    app.lastScheduledMeasure = startMeasure;
+                }
+                playbackLoop();
+            }
+        }
+
+        function getTempoForPosition(song, position) {
+            if (!song.tempoRamps || song.tempoRamps.length === 0) {
+                return song.bpm;
+            }
+            
+            const measure = Math.floor(position);
+            const beatInMeasure = (position - measure) * 4;
+            
+            for (const ramp of song.tempoRamps) {
+                if (position >= ramp.startMeasure && position <= ramp.endMeasure) {
+                    const progress = (position - ramp.startMeasure) / (ramp.endMeasure - ramp.startMeasure);
+                    return ramp.startTempo + (ramp.endTempo - ramp.startTempo) * progress;
+                }
+            }
+            
+            for (const ramp of song.tempoRamps) {
+                if (position > ramp.endMeasure) {
+                    return ramp.endTempo;
+                }
+            }
+            
+            return song.bpm;
+        }
+
+        function getTempoForMeasure(song, measure) {
+            return getTempoForPosition(song, measure);
+        }
+
+        function playbackLoop() {
+            if (!app.isPlaying) return;
+
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) {
+                return;
+            }
+
+            const now = performance.now();
+            let elapsed = now - app.playbackStartTime;
+
+            let measureStartTime = app.playbackStartTime;
+            let currentPosition = 1;
+            let currentTempo = song.bpm;
+
+            let m = 1;
+            while (m <= song.measures) {
+                const beatsInMeasure = song.measureBeats[m - 1] || 4;
+                const nextTempo = getTempoForMeasure(song, m);
+                const nextBeatInterval = 60000 / nextTempo;
+                const nextMeasureDuration = nextBeatInterval * beatsInMeasure;
+
+                if (elapsed < measureStartTime - app.playbackStartTime + nextMeasureDuration) {
+                    currentPosition = m;
+                    currentTempo = nextTempo;
+                    break;
+                }
+
+                measureStartTime += nextMeasureDuration;
+                m++;
+            }
+
+            if (m > song.measures) {
+                stopPlayback();
+                return;
+            }
+
+            currentPosition = getPositionFromElapsed(song, elapsed);
+            currentTempo = getTempoForPosition(song, currentPosition);
+
+            const beatInterval = 60000 / currentTempo;
+            const beatsInMeasure = song.measureBeats[Math.floor(currentPosition) - 1] || 4;
+            const measureDuration = beatInterval * beatsInMeasure;
+            const fractionalBeat = (currentPosition % 1) * beatsInMeasure;
+            const currentBeat = Math.floor(fractionalBeat) + 1;
+
+            if (app.lastBeat !== currentBeat) {
+                const playhead = document.getElementById('playhead');
+                if (playhead) {
+                    playhead.classList.remove('flash-beat-1', 'flash-beat');
+                    void playhead.offsetWidth;
+                    if (currentBeat === 1) {
+                        playhead.classList.add('flash-beat-1');
+                    } else {
+                        playhead.classList.add('flash-beat');
+                    }
+                }
+                app.lastBeat = currentBeat;
+            }
+
+            const currentMeasureInt = Math.floor(currentPosition);
+
+            if (currentMeasureInt !== app.lastScheduledMeasure) {
+                app.scheduledEventIds.clear();
+                scheduleEventsInMeasure(song, currentMeasureInt, measureStartTime, app.playbackStartTime, currentTempo);
+                app.lastScheduledMeasure = currentMeasureInt;
+            }
+
+            if (Math.floor(currentPosition) !== app.lastLedUpdateMeasure) {
+                initBeatLeds(beatsInMeasure);
+                app.lastLedUpdateMeasure = Math.floor(currentPosition);
+            }
+            updateBeatLeds(Math.min(currentBeat, beatsInMeasure));
+
+            app.currentPosition = currentPosition;
+            updatePlayhead();
+            document.getElementById('positionDisplay').textContent = `M${Math.floor(currentPosition)} B${currentBeat} ${currentTempo.toFixed(1)}BPM`;
+
+            const nextBeatTime = elapsed + beatInterval;
+            const timeout = Math.max(1, nextBeatTime - now);
+            app.playbackTimer = setTimeout(playbackLoop, timeout);
+        }
+
+        function getPositionFromElapsed(song, elapsed) {
+            let measureStartTime = app.playbackStartTime;
+            let m = 1;
+
+            while (m <= song.measures) {
+                const beatsInMeasure = song.measureBeats[m - 1] || 4;
+                const tempo = getTempoForMeasure(song, m);
+                const beatInterval = 60000 / tempo;
+                const measureDuration = beatInterval * beatsInMeasure;
+
+                if (elapsed < measureStartTime - app.playbackStartTime + measureDuration) {
+                    const posInMeasure = elapsed - (measureStartTime - app.playbackStartTime);
+                    const beatPosition = (posInMeasure / measureDuration) * beatsInMeasure;
+                    return m + (beatPosition / beatsInMeasure);
+                }
+
+                measureStartTime += measureDuration;
+                m++;
+            }
+
+            return song.measures + 1;
+        }
+
+        function scheduleEventsInMeasure(song, measure, measureStartTime, playbackStartTime) {
+            const beatInterval = getBeatInterval();
+            const subdivForMeasure = song.measureSubdivisions[measure - 1] || song.subdivision;
+            const subdivPerBeat = subdivForMeasure / 4;
+            const subdivInterval = beatInterval / subdivPerBeat;
+            const now = performance.now();
+            
+            song.events.filter(e => e.measure === measure).forEach(event => {
+                const eventBeat = Math.ceil(event.subdivision / subdivPerBeat);
+                const eventSubdivInBeat = ((event.subdivision - 1) % subdivPerBeat) + 1;
+                const eventTime = measureStartTime + (eventBeat - 1) * beatInterval + (eventSubdivInBeat - 1) * subdivInterval;
+                
+                const delay = eventTime - now;
+                if (delay > 0) {
+                    setTimeout(() => sendMidiEvent(event), delay);
+                } else if (app.isPlaying) {
+                    sendMidiEvent(event);
+                }
+            });
+        }
+
+        let _lastSentEventId = null;
+        let _lastSentTime = 0;
+
+        function sendMidiEvent(event) {
+            const now = performance.now();
+            if (_lastSentEventId === event.id && now - _lastSentTime < 10) {
+                return;
+            }
+            _lastSentEventId = event.id;
+            _lastSentTime = now;
+            
+            let output1 = app.selectedMidiOut;
+            let output2 = app.selectedMidiOut2;
+            let output3 = app.selectedMidiOut3;
+            
+            if (!output1 && app.midiAccess) {
+                const outputs = Array.from(app.midiAccess.outputs.values());
+                if (outputs.length > 0) {
+                    output1 = outputs[0];
+                }
+            }
+
+            if (output1 || output2 || output3) {
+                try {
+                    const validCcs = event.ccs.filter(c => c.cc > 0);
+                    
+                    const isLight = event.name && event.name.includes('Light');
+                    const isWingPilot = event.name && event.name.includes('Wing Pilot');
+                    const isPilot = event.name && event.name.includes('Pilot');
+
+                    if (isLight) {
+                        validCcs.forEach(ccData => {
+                            const midiStatus = 0xB0;
+                            const midiMessage = [midiStatus, ccData.cc, ccData.value];
+                            if (output1) output1.send(midiMessage);
+                        });
+                        if (event.sysex && event.sysex.trim()) {
+                            const sysexHex = event.sysex.replace(/[^0-9A-Fa-f]/g, '');
+                            const bytes = [];
+                            for (let i = 0; i < sysexHex.length; i += 2) {
+                                bytes.push(parseInt(sysexHex.substr(i, 2), 16));
+                            }
+                            if (bytes.length > 0 && output1) {
+                                output1.send(new Uint8Array(bytes));
+                            }
+                        }
+                    } else if (isPilot && !isWingPilot) {
+                        validCcs.forEach(ccData => {
+                            const midiStatus = 0xB0;
+                            const midiMessage = [midiStatus, ccData.cc, ccData.value];
+                            if (output3) output3.send(midiMessage);
+                        });
+                        if (event.ccs2) {
+                            const validCcs2 = event.ccs2.filter(c => c.cc > 0);
+                            validCcs2.forEach(ccData => {
+                                const midiStatus = 0xB1;
+                                const midiMessage = [midiStatus, ccData.cc, ccData.value];
+                                if (output3) output3.send(midiMessage);
+                            });
+                        }
+                        if (event.pc !== undefined && event.pc > 0) {
+                            if (output3) output3.send([0xC0, event.pc]);
+                        }
+                        if (event.pc2 !== undefined && event.pc2 > 0) {
+                            if (output3) output3.send([0xC1, event.pc2]);
+                        }
+                        if (event.sysex && event.sysex.trim()) {
+                            const sysexHex = event.sysex.replace(/[^0-9A-Fa-f]/g, '');
+                            const bytes = [];
+                            for (let i = 0; i < sysexHex.length; i += 2) {
+                                bytes.push(parseInt(sysexHex.substr(i, 2), 16));
+                            }
+                            if (bytes.length > 0 && output3) {
+                                output3.send(new Uint8Array(bytes));
+                            }
+                        }
+                    } else if (isWingPilot) {
+                        validCcs.forEach(ccData => {
+                            const midiStatus = 0xB0;
+                            const midiMessage = [midiStatus, ccData.cc, ccData.value];
+                            if (output2) output2.send(midiMessage);
+                        });
+                        if (event.ccs2) {
+                            const validCcs2 = event.ccs2.filter(c => c.cc > 0);
+                            validCcs2.forEach(ccData => {
+                                const midiStatus = 0xB1;
+                                const midiMessage = [midiStatus, ccData.cc, ccData.value];
+                                if (output2) output2.send(midiMessage);
+                            });
+                        }
+                        if (event.sysex && event.sysex.trim()) {
+                            const sysexHex = event.sysex.replace(/[^0-9A-Fa-f]/g, '');
+                            const bytes = [];
+                            for (let i = 0; i < sysexHex.length; i += 2) {
+                                bytes.push(parseInt(sysexHex.substr(i, 2), 16));
+                            }
+                            if (output2) output2.send(new Uint8Array(bytes));
+                        }
+                    } else if (event.type === 'volume') {
+                        validCcs.forEach(ccData => {
+                            const midiStatus = 0xB0;
+                            const midiMessage = [midiStatus, ccData.cc, ccData.value];
+                            if (output1) output1.send(midiMessage);
+                        });
+                        if (event.sysex && event.sysex.trim()) {
+                            const sysexHex = event.sysex.replace(/[^0-9A-Fa-f]/g, '');
+                            const bytes = [];
+                            for (let i = 0; i < sysexHex.length; i += 2) {
+                                bytes.push(parseInt(sysexHex.substr(i, 2), 16));
+                            }
+                            if (bytes.length > 0 && output1) {
+                                output1.send(new Uint8Array(bytes));
+                            }
+                        }
+                    } else {
+                        if (output2) {
+                            validCcs.forEach(ccData => {
+                                const midiStatus = 0xB0;
+                                const midiMessage = [midiStatus, ccData.cc, ccData.value];
+                                output2.send(midiMessage);
+                            });
+                            if (event.ccs2) {
+                                const validCcs2 = event.ccs2.filter(c => c.cc > 0);
+                                validCcs2.forEach(ccData => {
+                                    const midiStatus = 0xB1;
+                                    const midiMessage = [midiStatus, ccData.cc, ccData.value];
+                                    output2.send(midiMessage);
+                                });
+                            }
+                            if (event.sysex && event.sysex.trim()) {
+                                const sysexHex = event.sysex.replace(/[^0-9A-Fa-f]/g, '');
+                                const bytes = [];
+                                for (let i = 0; i < sysexHex.length; i += 2) {
+                                    bytes.push(parseInt(sysexHex.substr(i, 2), 16));
+                                }
+                                if (bytes.length > 0) {
+                                    output2.send(new Uint8Array(bytes));
+                                }
+                            }
+                        }
+                    }
+
+                    const ccList = validCcs.map(c => `C${c.cc}:${c.value}`).join(' ');
+                    document.getElementById('midiOutDisplay').textContent = `Ch1 ${ccList}`;
+                } catch (e) {
+                    console.error('MIDI send error:', e);
+                }
+            }
+        }
+
+        function stopPlayback() {
+            app.isPlaying = false;
+            app.currentPosition = 0;
+            app.sequenceDetected = false;
+            app.audioTimestamps = [];
+            app.lastScheduledMeasure = 0;
+            app.lastLedUpdateMeasure = 0;
+            app.scheduledEventIds = new Set();
+            
+            if (app.playbackTimer) {
+                clearTimeout(app.playbackTimer);
+                app.playbackTimer = null;
+            }
+
+            document.getElementById('playBtn').classList.remove('playing');
+            document.getElementById('playBtn').textContent = '▶';
+            document.getElementById('playLed').classList.remove('active');
+            document.getElementById('positionDisplay').textContent = 'Measure: --';
+            document.getElementById('midiOutDisplay').textContent = '--';
+            document.getElementById('sequenceStatus').textContent = 'Waiting for audio sequence...';
+            document.querySelectorAll('.beat-led').forEach(led => led.classList.remove('active'));
+            
+            renderGrid();
+            updatePlayhead();
+        }
+
+        async function initMidi() {
+            if (!navigator.requestMIDIAccess) {
+                return;
+            }
+
+            try {
+                app.midiAccess = await navigator.requestMIDIAccess({sysex: true});
+                updateMidiInputs();
+                updateMidiOutputs();
+                updateMidiOutputs2();
+                updateMidiOutputs3();
+                setupMidiInputHandler();
+                setupMidiOutputHandler();
+                
+                app.midiAccess.onstatechange = function() {
+                    updateMidiInputs();
+                    updateMidiOutputs();
+                    updateMidiOutputs2();
+                    updateMidiOutputs3();
+                };
+                
+                setTimeout(function() {
+                    updateMidiInputs();
+                    updateMidiOutputs();
+                    updateMidiOutputs2();
+                    updateMidiOutputs3();
+                }, 1000);
+            } catch (e) {
+                console.error('MIDI init error:', e);
+            }
+        }
+
+        function updateMidiInputs() {
+            const select = document.getElementById('midiInSelect');
+            select.innerHTML = '<option value="">MIDI IN</option>';
+            
+            app.midiInputs = [];
+            
+            if (app.midiAccess) {
+                try {
+                    const inputs = Array.from(app.midiAccess.inputs.values());
+                    inputs.forEach(function(input) {
+                        app.midiInputs.push(input);
+                        const option = document.createElement('option');
+                        option.value = input.id;
+                        option.textContent = input.name || 'MIDI Input ' + (select.options.length);
+                        select.appendChild(option);
+                    });
+                } catch (e) {
+                    console.error('Error getting MIDI inputs:', e);
+                }
+            }
+
+            const savedInput = localStorage.getItem('sequencer4_midiIn');
+            if (savedInput && Array.from(select.options).some(o => o.value === savedInput)) {
+                select.value = savedInput;
+                const input = app.midiInputs.find(i => i.id === savedInput);
+                if (input) {
+                    input.onmidimessage = handleMidiInput;
+                    document.getElementById('midiInLed').classList.add('on');
+                }
+            }
+        }
+
+        function setupMidiInputHandler() {
+            const select = document.getElementById('midiInSelect');
+            select.addEventListener('change', (e) => {
+                if (app.midiAccess) {
+                    try {
+                        const inputs = Array.from(app.midiAccess.inputs.values());
+                        inputs.forEach(function(input) {
+                            input.onmidimessage = null;
+                        });
+                    } catch (e) {
+                        console.error('Error clearing MIDI inputs:', e);
+                    }
+                }
+                
+                const selectedInput = app.midiInputs.find(i => i.id === e.target.value);
+                if (selectedInput) {
+                    selectedInput.onmidimessage = handleMidiInput;
+                    document.getElementById('midiInLed').classList.add('on');
+                    localStorage.setItem('sequencer4_midiIn', selectedInput.id);
+                } else {
+                    document.getElementById('midiInLed').classList.remove('on');
+                    localStorage.removeItem('sequencer4_midiIn');
+                }
+            });
+        }
+
+        function updateMidiOutputs() {
+            const select = document.getElementById('midiOutSelect');
+            select.innerHTML = '<option value="">LIGHT MIDI OUT</option>';
+            
+            app.midiOutputs = [];
+            
+            if (app.midiAccess) {
+                try {
+                    const outputs = Array.from(app.midiAccess.outputs.values());
+                    outputs.forEach(function(output) {
+                        app.midiOutputs.push(output);
+                        const option = document.createElement('option');
+                        option.value = output.id;
+                        option.textContent = output.name || 'MIDI Output ' + (select.options.length);
+                        select.appendChild(option);
+                    });
+                } catch (e) {
+                    console.error('Error getting MIDI outputs:', e);
+                }
+            }
+
+            const savedOutput = localStorage.getItem('sequencer4_midiOut');
+            if (savedOutput && Array.from(select.options).some(o => o.value === savedOutput)) {
+                select.value = savedOutput;
+                const output = app.midiOutputs.find(o => o.id === savedOutput);
+                app.selectedMidiOut = output || null;
+                document.getElementById('midiOutLed').classList.toggle('on', !!output);
+            }
+        }
+
+        function setupMidiOutputHandler() {
+            const select = document.getElementById('midiOutSelect');
+            select.addEventListener('change', (e) => {
+                const output = app.midiOutputs.find(o => o.id === e.target.value);
+                app.selectedMidiOut = output || null;
+                document.getElementById('midiOutLed').classList.toggle('on', !!output);
+                if (output) {
+                    localStorage.setItem('sequencer4_midiOut', output.id);
+                } else {
+                    localStorage.removeItem('sequencer4_midiOut');
+                }
+            });
+
+            const select2 = document.getElementById('midiOut2Select');
+            select2.addEventListener('change', (e) => {
+                const output = app.midiOutputs.find(o => o.id === e.target.value);
+                app.selectedMidiOut2 = output || null;
+                document.getElementById('midiOut2Led').classList.toggle('on', !!output);
+                if (output) {
+                    localStorage.setItem('sequencer4_midiOut2', output.id);
+                } else {
+                    localStorage.removeItem('sequencer4_midiOut2');
+                }
+            });
+
+            const select3 = document.getElementById('midiOut3Select');
+            select3.addEventListener('change', (e) => {
+                const output = app.midiOutputs.find(o => o.id === e.target.value);
+                app.selectedMidiOut3 = output || null;
+                document.getElementById('midiOut3Led').classList.toggle('on', !!output);
+                if (output) {
+                    localStorage.setItem('sequencer4_midiOut3', output.id);
+                } else {
+                    localStorage.removeItem('sequencer4_midiOut3');
+                }
+            });
+        }
+
+        function updateMidiOutputs2() {
+            const select = document.getElementById('midiOut2Select');
+            select.innerHTML = '<option value="">WING MIDI OUT</option>';
+            
+            if (app.midiAccess) {
+                try {
+                    const outputs = Array.from(app.midiAccess.outputs.values());
+                    outputs.forEach(function(output) {
+                        const option = document.createElement('option');
+                        option.value = output.id;
+                        option.textContent = output.name || 'MIDI Output ' + (select.options.length);
+                        select.appendChild(option);
+                    });
+                } catch (e) {
+                    console.error('Error getting MIDI outputs:', e);
+                }
+            }
+
+            const savedOutput = localStorage.getItem('sequencer4_midiOut2');
+            if (savedOutput && Array.from(select.options).some(o => o.value === savedOutput)) {
+                select.value = savedOutput;
+                const output = app.midiOutputs.find(o => o.id === savedOutput);
+                app.selectedMidiOut2 = output || null;
+                document.getElementById('midiOut2Led').classList.toggle('on', !!output);
+            }
+        }
+
+        function updateMidiOutputs3() {
+            const select = document.getElementById('midiOut3Select');
+            select.innerHTML = '<option value="">PEDAL MIDI OUT</option>';
+            
+            if (app.midiAccess) {
+                try {
+                    const outputs = Array.from(app.midiAccess.outputs.values());
+                    outputs.forEach(function(output) {
+                        const option = document.createElement('option');
+                        option.value = output.id;
+                        option.textContent = output.name || 'MIDI Output ' + (select.options.length);
+                        select.appendChild(option);
+                    });
+                } catch (e) {
+                    console.error('Error getting MIDI outputs:', e);
+                }
+            }
+
+            const savedOutput = localStorage.getItem('sequencer4_midiOut3');
+            if (savedOutput && Array.from(select.options).some(o => o.value === savedOutput)) {
+                select.value = savedOutput;
+                const output = app.midiOutputs.find(o => o.id === savedOutput);
+                app.selectedMidiOut3 = output || null;
+                document.getElementById('midiOut3Led').classList.toggle('on', !!output);
+            }
+        }
+
+        async function initAudioInput() {
+            try {
+                let audioInputs = [];
+                
+                const tryEnumerate = async () => {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    audioInputs = devices.filter(d => d.kind === 'audioinput');
+                    return audioInputs.length > 0;
+                };
+                
+                await tryEnumerate();
+                
+                if (audioInputs.length === 0) {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    await tryEnumerate();
+                }
+                
+                const select = document.getElementById('audioInSelect');
+                select.innerHTML = '<option value="">Select Audio Input</option>';
+                
+                const defaultOption = document.createElement('option');
+                defaultOption.value = 'default';
+                defaultOption.textContent = 'System Default';
+                defaultOption.dataset.deviceId = 'default';
+                select.appendChild(defaultOption);
+                
+                audioInputs.forEach((input, index) => {
+                    const option = document.createElement('option');
+                    option.value = index.toString();
+                    option.textContent = input.label || `Microphone ${index + 1}`;
+                    option.dataset.deviceId = input.deviceId;
+                    option.dataset.groupId = input.groupId;
+                    select.appendChild(option);
+                });
+
+                select.addEventListener('change', async (e) => {
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    
+                    if (app.audioInput) {
+                        app.audioInput.disconnect();
+                        app.audioInput = null;
+                    }
+                    if (!e.target.value) return;
+
+                    app.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    await app.audioContext.resume();
+                    
+                    const deviceId = selectedOption.dataset.deviceId;
+                    const audioConstraints = {
+                        echoCancellation: false,
+                        autoGainControl: false,
+                        noiseSuppression: false
+                    };
+                    if (deviceId && deviceId !== 'default') {
+                        audioConstraints.deviceId = { exact: deviceId };
+                    }
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: audioConstraints
+                    });
+                    app.audioInput = app.audioContext.createMediaStreamSource(stream);
+                    app.analyser = app.audioContext.createAnalyser();
+                    app.analyser.fftSize = 256;
+                    app.audioInput.connect(app.analyser);
+                    
+                    app.audioTimestamps = [];
+                    app.lastAudioLevel = 0;
+                    app.sequenceDetected = false;
+                    
+                    updateVuMeter();
+                });
+            } catch (e) {
+                console.error('Audio input init error:', e);
+            }
+        }
+
+        function updateVuMeter() {
+            if (!app.analyser) return;
+            
+            if (app.audioContext && app.audioContext.state === 'suspended') {
+                app.audioContext.resume();
+            }
+            
+            const timeDomainData = new Uint8Array(app.analyser.frequencyBinCount);
+            app.analyser.getByteTimeDomainData(timeDomainData);
+            
+            let sum = 0;
+            for (let i = 0; i < timeDomainData.length; i++) {
+                const v = (timeDomainData[i] - 128) / 128;
+                sum += v * v;
+            }
+            const rms = Math.sqrt(sum / timeDomainData.length);
+            const percent = Math.min(100, rms * 500);
+            
+            document.getElementById('vuMeter').style.width = `${percent}%`;
+            
+            const now = Date.now();
+            const threshold = 0.05;
+            
+            if (rms > threshold && app.lastAudioLevel <= threshold) {
+                if (!app.audioTimestamps) app.audioTimestamps = [];
+                app.audioTimestamps.push(now);
+                
+                if (app.audioTimestamps.length > 7) {
+                    app.audioTimestamps.shift();
+                }
+                
+                checkAudioSequence();
+            }
+            
+            app.lastAudioLevel = rms;
+            requestAnimationFrame(updateVuMeter);
+        }
+
+        function checkAudioSequence() {
+            if (app.isPlaying || app.sequenceDetected) return;
+            if (!document.getElementById('midiPcCheckbox').checked) return;
+            if (!app.audioTimestamps || app.audioTimestamps.length < 7) {
+                return;
+            }
+            
+            const ts = app.audioTimestamps.slice(2);
+            const intervals = [];
+            for (let i = ts.length - 1; i > 0; i--) {
+                intervals.push(ts[i] - ts[i-1]);
+            }
+            
+            if (intervals.length !== 4) return;
+            
+            const avg = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+            
+            const allConsistent = intervals.every(t => Math.abs(t - avg) / avg < 0.5);
+            
+            if (allConsistent && avg > 150 && avg < 2000) {
+                app.sequenceDetected = true;
+                document.getElementById('sequenceStatus').classList.add('detected');
+                document.getElementById('sequenceStatus').textContent = 'Sequence detected! Starting...';
+                setTimeout(() => {
+                    document.getElementById('sequenceStatus').classList.remove('detected');
+                }, 2000);
+                startPlayback();
+            }
+        }
+
+        function handleMidiInput(event) {
+            const data = event.data;
+            if (!data || data.length < 2) return;
+
+            const status = data[0];
+            const channel = (status & 0x0F) + 1;
+            const cc = data[1];
+            const value = data.length > 2 ? data[2] : 0;
+            const messageType = status & 0xF0;
+
+            if (messageType === 0xC0) {
+                const pcValue = data[1];
+                const playlistLocked = document.getElementById('lockPlaylistCheck').checked;
+                
+                let output = app.selectedMidiOut;
+                if (!output && app.midiAccess) {
+                    const outputs = Array.from(app.midiAccess.outputs.values());
+                    if (outputs.length > 0) output = outputs[0];
+                }
+                
+                if (output) {
+                    output.send(data);
+                }
+
+                if (playlistLocked && pcValue < app.playlist.length) {
+                    const targetSong = app.playlist[pcValue];
+                    if (targetSong && targetSong.id !== app.activeSongId) {
+                        selectSong(targetSong.id);
+                    } else if (targetSong) {
+                        scrollToActiveSong();
+                    }
+                    if (app.selectedMidiOut2) app.selectedMidiOut2.send([0xB1, 27, 0]);
+                    startPlayback();
+                    return;
+                }
+            }
+        }
+
+        function exportPlaylist() {
+            const data = JSON.stringify({
+                playlist: app.playlist,
+                activeSongId: app.activeSongId
+            }, null, 2);
+            
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Gotha!.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportPlaylistCsv() {
+            const rows = app.playlist.map((song, i) => `${i + 1}\t${song.name}`);
+            const csv = rows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Gotha!.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importPlaylist(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    app.playlist = data.playlist || [];
+                    app.activeSongId = data.activeSongId || null;
+                    
+                    app.playlist.forEach(song => {
+                        if (!song.customGroups) {
+                            song.customGroups = [];
+                        }
+                        song.events.forEach(event => {
+                            if (!event.ccs) {
+                                event.ccs = [
+                                    { cc: event.cc || 0, value: event.value || 0 },
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 },
+                                    { cc: 0, value: 0 }
+                                ];
+                            }
+                        });
+                    });
+                    
+                    saveToStorage();
+                    renderPlaylist();
+                    if (app.activeSongId) {
+                        loadSongToSequencer();
+                    }
+                } catch (err) {
+                    console.error('Import error:', err);
+                    alert('Failed to import playlist');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showConfirmModal(title, message, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            const modal = document.getElementById('confirmModal');
+            modal.classList.add('visible');
+            
+            const confirmBtn = document.getElementById('modalConfirm');
+            const cancelBtn = document.getElementById('modalCancel');
+            
+            const cleanup = () => {
+                modal.classList.remove('visible');
+                confirmBtn.onclick = null;
+                cancelBtn.onclick = null;
+            };
+            
+            confirmBtn.onclick = () => {
+                cleanup();
+                onConfirm();
+            };
+            
+            cancelBtn.onclick = cleanup;
+        }
+
+        function saveSong() {
+            const song = app.playlist.find(s => s.id === app.activeSongId);
+            if (!song) return;
+            
+            const data = JSON.stringify(song, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${song.name.replace(/[^a-z0-9]/gi, '_')}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function init() {
+            loadFromStorage();
+            
+            if (app.playlist.length === 0) {
+                const newSong = createSong('Song 1');
+                app.playlist.push(newSong);
+                app.activeSongId = newSong.id;
+                saveToStorage();
+            }
+
+            renderPlaylist();
+            loadSongToSequencer();
+            initMidi();
+            initAudioInput();
+
+            let selectedMeasureForContext = null;
+            let selectedPlaylistForContext = null;
+            const contextMenu = document.getElementById('measureContextMenu');
+            const playlistContextMenu = document.getElementById('playlistContextMenu');
+
+            document.getElementById('playlist').addEventListener('contextmenu', (e) => {
+                const item = e.target.closest('.playlist-item');
+                if (item) {
+                    e.preventDefault();
+                    selectedPlaylistForContext = item.dataset.id;
+                    let x = e.clientX;
+                    let y = e.clientY;
+                    playlistContextMenu.classList.add('visible');
+                    const menuWidth = playlistContextMenu.offsetWidth;
+                    const menuHeight = playlistContextMenu.offsetHeight;
+                    if (x + menuWidth > window.innerWidth) {
+                        x = window.innerWidth - menuWidth - 10;
+                    }
+                    if (y + menuHeight > window.innerHeight) {
+                        y = window.innerHeight - menuHeight - 10;
+                    }
+                    playlistContextMenu.style.left = `${x}px`;
+                    playlistContextMenu.style.top = `${y}px`;
+                }
+            });
+
+            document.getElementById('sortPlaylistBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                sortPlaylistAlphabetically();
+                playlistContextMenu.classList.remove('visible');
+            });
+
+            document.getElementById('exportPlaylistCsvBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                exportPlaylistCsv();
+                playlistContextMenu.classList.remove('visible');
+            });
+
+            document.getElementById('gridContainer').addEventListener('contextmenu', (e) => {
+                if (e.altKey) return;
+                const measureEl = e.target.closest('.measure');
+                if (measureEl) {
+                    e.preventDefault();
+                    selectedMeasureForContext = parseInt(measureEl.dataset.measure);
+                    let x = e.clientX;
+                    let y = e.clientY;
+                    contextMenu.classList.add('visible');
+                    const menuWidth = contextMenu.offsetWidth;
+                    const menuHeight = contextMenu.offsetHeight;
+                    if (x + menuWidth > window.innerWidth) {
+                        x = window.innerWidth - menuWidth - 10;
+                    }
+                    if (y + menuHeight > window.innerHeight) {
+                        y = window.innerHeight - menuHeight - 10;
+                    }
+                    contextMenu.style.left = `${x}px`;
+                    contextMenu.style.top = `${y}px`;
+                }
+            });
+
+            document.getElementById('gridContainer').addEventListener('contextmenu', (e) => {
+                if (e.altKey) {
+                    const measureEl = e.target.closest('.measure');
+                    if (measureEl) {
+                        e.preventDefault();
+                        const measure = parseInt(measureEl.dataset.measure);
+                        const song = app.playlist.find(s => s.id === app.activeSongId);
+                        if (song) {
+                            const subdivForMeasure = song.measureSubdivisions[measure - 1] || song.subdivision;
+                            const rect = measureEl.getBoundingClientRect();
+                            const xInMeasure = e.clientX - rect.left;
+                            const beatsInMeasure = song.measureBeats[measure - 1] || 4;
+                            const subdivPerBeat = subdivForMeasure / 4;
+                            const baseBeatWidth = 25;
+                            const subdivFactor = subdivPerBeat;
+                            const measureWidth = baseBeatWidth * beatsInMeasure * subdivFactor;
+                            const beatWidth = measureWidth / beatsInMeasure;
+                            const xInBeat = xInMeasure - (Math.floor(xInMeasure / beatWidth)) * beatWidth;
+                            const beat = Math.max(1, Math.min(beatsInMeasure, Math.floor(xInMeasure / beatWidth) + 1));
+                            const subPos = Math.max(1, Math.floor(xInBeat / (beatWidth / subdivPerBeat)) + 1);
+                            const subdivPos = (beat - 1) * subdivPerBeat + subPos;
+                            addEventAtPosition(measure, subdivPos);
+                        }
+                    }
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                contextMenu.classList.remove('visible');
+                playlistContextMenu.classList.remove('visible');
+                const ccModal = document.getElementById('ccEditorModal');
+                const volModal = document.getElementById('ccVolumeEditorModal');
+                if (ccModal && ccModal.classList.contains('visible')) {
+                    if (!ccModal.contains(e.target)) {
+                        saveCcEditor();
+                        ccModal.classList.remove('visible');
+                    }
+                }
+                if (volModal && volModal.classList.contains('visible')) {
+                    if (!volModal.contains(e.target)) {
+                        saveCcVolumeEditor();
+                        volModal.classList.remove('visible');
+                    }
+                }
+                const pilotModal = document.getElementById('ccPilotEditorModal');
+                if (pilotModal && pilotModal.classList.contains('visible')) {
+                    if (!pilotModal.contains(e.target)) {
+                        saveCcPilotEditor();
+                        pilotModal.classList.remove('visible');
+                    }
+                }
+            });
+
+            document.querySelectorAll('.context-menu-item[data-beats]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (selectedMeasureForContext) {
+                        const song = app.playlist.find(s => s.id === app.activeSongId);
+                        if (song) {
+                            song.measureBeats[selectedMeasureForContext - 1] = parseInt(item.dataset.beats);
+                            saveToStorage();
+                            renderGrid();
+                        }
+                    }
+                    contextMenu.classList.remove('visible');
+                });
+            });
+
+            document.querySelectorAll('.context-menu-item[data-subdiv]').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (selectedMeasureForContext) {
+                        const song = app.playlist.find(s => s.id === app.activeSongId);
+                        if (song) {
+                            song.measureSubdivisions[selectedMeasureForContext - 1] = parseInt(item.dataset.subdiv);
+                            saveToStorage();
+                            renderGrid();
+                        }
+                    }
+                    contextMenu.classList.remove('visible');
+                });
+            });
+
+            document.getElementById('deleteMeasureBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (selectedMeasureForContext) {
+                    const song = app.playlist.find(s => s.id === app.activeSongId);
+                    if (song) {
+                        song.measureBeats.splice(selectedMeasureForContext - 1, 1);
+                        song.measureSubdivisions.splice(selectedMeasureForContext - 1, 1);
+                        for (let i = song.events.length - 1; i >= 0; i--) {
+                            if (song.events[i].measure === selectedMeasureForContext) {
+                                song.events.splice(i, 1);
+                            } else if (song.events[i].measure > selectedMeasureForContext) {
+                                song.events[i].measure--;
+                            }
+                        }
+                        if (song.customGroups) {
+                            for (let i = song.customGroups.length - 1; i >= 0; i--) {
+                                const group = song.customGroups[i];
+                                if (group.measures.includes(selectedMeasureForContext)) {
+                                    if (group.measures.length === 1) {
+                                        song.customGroups.splice(i, 1);
+                                    } else {
+                                        group.measures = group.measures.filter(m => m !== selectedMeasureForContext);
+                                        group.measures = group.measures.map(m => m > selectedMeasureForContext ? m - 1 : m);
+                                    }
+                                } else {
+                                    group.measures = group.measures.map(m => m > selectedMeasureForContext ? m - 1 : m);
+                                }
+                            }
+                        }
+                        if (song.tempoRamps) {
+                            for (let i = song.tempoRamps.length - 1; i >= 0; i--) {
+                                const ramp = song.tempoRamps[i];
+                                if (ramp.startMeasure === selectedMeasureForContext || ramp.endMeasure === selectedMeasureForContext) {
+                                    song.tempoRamps.splice(i, 1);
+                                } else {
+                                    if (ramp.startMeasure > selectedMeasureForContext) {
+                                        ramp.startMeasure--;
+                                    }
+                                    if (ramp.endMeasure > selectedMeasureForContext) {
+                                        ramp.endMeasure--;
+                                    }
+                                }
+                            }
+                        }
+                        song.measures--;
+                        saveToStorage();
+                        renderGrid();
+                    }
+                    contextMenu.classList.remove('visible');
+                }
+            });
+
+            document.getElementById('insertMeasureBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (selectedMeasureForContext) {
+                    const song = app.playlist.find(s => s.id === app.activeSongId);
+                    if (song) {
+                        song.measureBeats.splice(selectedMeasureForContext, 0, 4);
+                        const subdivToCopy = song.measureSubdivisions[selectedMeasureForContext - 1] || 4;
+                        song.measureSubdivisions.splice(selectedMeasureForContext, 0, subdivToCopy);
+                        for (let i = song.events.length - 1; i >= 0; i--) {
+                            if (song.events[i].measure >= selectedMeasureForContext) {
+                                song.events[i].measure++;
+                            }
+                        }
+                        if (song.customGroups) {
+                            for (let i = song.customGroups.length - 1; i >= 0; i--) {
+                                const group = song.customGroups[i];
+                                group.measures = group.measures.map(m => m >= selectedMeasureForContext ? m + 1 : m);
+                            }
+                        }
+                        if (song.tempoRamps) {
+                            for (let i = 0; i < song.tempoRamps.length; i++) {
+                                const ramp = song.tempoRamps[i];
+                                if (ramp.startMeasure >= selectedMeasureForContext) {
+                                    ramp.startMeasure++;
+                                }
+                                if (ramp.endMeasure >= selectedMeasureForContext) {
+                                    ramp.endMeasure++;
+                                }
+                            }
+                        }
+                        song.measures++;
+                        saveToStorage();
+                        renderGrid();
+                    }
+                    contextMenu.classList.remove('visible');
+                }
+            });
+
+            document.getElementById('playBtn').addEventListener('click', () => {
+                if (app.isPlaying) {
+                    stopPlayback();
+                } else {
+                    startPlayback();
+                }
+            });
+
+            document.getElementById('startOffsetInput').addEventListener('change', () => {
+                saveToStorage();
+            });
+
+            document.getElementById('refreshMidiBtn').addEventListener('click', function() {
+                initMidi();
+            });
+
+            document.getElementById('addSongBtn').addEventListener('click', () => {
+                const newSong = createSong(`Song ${app.playlist.length + 1}`);
+                app.playlist.push(newSong);
+                saveToStorage();
+                renderPlaylist();
+                selectSong(newSong.id);
+            });
+
+            document.getElementById('lockPlaylistCheck').addEventListener('change', () => {
+                updateSortButtonState();
+                renderPlaylist();
+            });
+
+            const audioInputGroup = document.getElementById('audioInputGroup');
+            audioInputGroup.classList.add('hidden');
+            document.getElementById('midiPcCheckbox').addEventListener('change', (e) => {
+                audioInputGroup.classList.toggle('hidden', !e.target.checked);
+            });
+
+            document.getElementById('exportBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                playlistContextMenu.classList.remove('visible');
+                exportPlaylist();
+            });
+            document.getElementById('importBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                playlistContextMenu.classList.remove('visible');
+                document.getElementById('importFile').click();
+            });
+            document.getElementById('importFile').addEventListener('change', (e) => {
+                if (e.target.files[0]) {
+                    importPlaylist(e.target.files[0]);
+                    e.target.value = '';
+                }
+            });
+
+            document.getElementById('clearPlaylistBtn').addEventListener('click', () => {
+                if (app.playlist.length === 0) return;
+                showConfirmModal('Clear Playlist', 'Are you sure you want to clear the entire playlist? This cannot be undone.', () => {
+                    app.playlist = [];
+                    app.activeSongId = null;
+                    saveToStorage();
+                    renderPlaylist();
+                    document.getElementById('gridContainer').innerHTML = '';
+                    document.getElementById('songName').value = '';
+                    document.getElementById('bpmInput').value = '';
+                    document.getElementById('measuresInput').value = '';
+                });
+            });
+
+            document.getElementById('loadSongBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                playlistContextMenu.classList.remove('visible');
+                document.getElementById('loadSongFile').click();
+            });
+            document.getElementById('loadSongFile').addEventListener('change', (e) => {
+                if (e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const song = JSON.parse(event.target.result);
+                            if (song.id && song.name && song.events) {
+                                song.id = generateId();
+                                app.playlist.push(song);
+                                saveToStorage();
+                                renderPlaylist();
+                                selectSong(song.id);
+                            } else {
+                                alert('Invalid song file');
+                            }
+                        } catch (err) {
+                            alert('Failed to load song');
+                        }
+                    };
+                    reader.readAsText(e.target.files[0]);
+                    e.target.value = '';
+                }
+            });
+
+            document.getElementById('saveSongBtn').addEventListener('click', saveSong);
+
+            document.getElementById('songName').addEventListener('change', (e) => {
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (song) {
+                    song.name = e.target.value;
+                    saveToStorage();
+                    renderPlaylist();
+                }
+            });
+
+            document.getElementById('bpmInput').addEventListener('change', (e) => {
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (song) {
+                    song.bpm = Math.max(20, Math.min(300, parseFloat(e.target.value) || 120));
+                    e.target.value = song.bpm;
+                    saveToStorage();
+                    renderPlaylist();
+                }
+            });
+
+            document.getElementById('measuresInput').addEventListener('change', (e) => {
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (song) {
+                    const newMeasures = Math.max(10, Math.min(1000, parseInt(e.target.value) || 100));
+                    const oldMeasures = song.measures;
+                    song.measures = newMeasures;
+                    
+                    if (newMeasures > oldMeasures) {
+                        for (let i = oldMeasures; i < newMeasures; i++) {
+                            song.measureBeats.push(4);
+                        }
+                    } else {
+                        song.measureBeats = song.measureBeats.slice(0, newMeasures);
+                        song.events = song.events.filter(e => e.measure <= newMeasures);
+                    }
+                    
+                    e.target.value = song.measures;
+                    saveToStorage();
+                    renderGrid();
+                    renderPlaylist();
+                }
+            });
+
+            document.getElementById('subdivInput').addEventListener('change', (e) => {
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (song) {
+                    const oldSubdiv = song.subdivision;
+                    song.subdivision = parseInt(e.target.value);
+                    
+                    const beatsPerMeasure = 4;
+                    const subdivPerBeat = song.subdivision / beatsPerMeasure;
+                    const oldSubdivPerBeat = oldSubdiv / beatsPerMeasure;
+                    
+                    song.events.forEach(event => {
+                        const beat = Math.ceil(event.subdivision / oldSubdivPerBeat);
+                        const subPos = ((event.subdivision - 1) % oldSubdivPerBeat) + 1;
+                        event.subdivision = (beat - 1) * subdivPerBeat + subPos;
+                    });
+                    
+                    saveToStorage();
+                    renderGrid();
+                }
+            });
+
+            document.getElementById('eventChannel').addEventListener('change', (e) => {
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (song && app.selectedEvent) {
+                    const event = song.events.find(ev => ev.id === app.selectedEvent);
+                    if (event) {
+                        event.channel = Math.max(1, Math.min(16, parseInt(e.target.value) || 1));
+                        e.target.value = event.channel;
+                        saveToStorage();
+                        renderGrid();
+                    }
+                }
+            });
+
+            document.getElementById('eventCC').addEventListener('change', (e) => {
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (song && app.selectedEvent) {
+                    const event = song.events.find(ev => ev.id === app.selectedEvent);
+                    if (event) {
+                        event.ccs[0].cc = Math.max(0, Math.min(127, parseInt(e.target.value) || 0));
+                        e.target.value = event.ccs[0].cc;
+                        saveToStorage();
+                        renderGrid();
+                    }
+                }
+            });
+
+            document.getElementById('eventValue').addEventListener('change', (e) => {
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (song && app.selectedEvent) {
+                    const event = song.events.find(ev => ev.id === app.selectedEvent);
+                    if (event) {
+                        event.ccs[0].value = Math.max(0, Math.min(127, parseInt(e.target.value) || 0));
+                        e.target.value = event.ccs[0].value;
+                        saveToStorage();
+                    }
+                }
+            });
+
+            document.getElementById('deleteEventBtn').addEventListener('click', () => {
+                if (app.selectedEvent) {
+                    deleteEvent(app.selectedEvent);
+                }
+            });
+
+            document.getElementById('gridContainer').addEventListener('click', handleGridClick);
+
+            document.getElementById('gridContainer').addEventListener('mousedown', (e) => {
+                if (e.altKey && e.button === 1) {
+                    e.preventDefault();
+                    const measureEl = e.target.closest('.measure');
+                    if (!measureEl) return;
+                    const song = app.playlist.find(s => s.id === app.activeSongId);
+                    if (!song) return;
+
+                    const measure = parseInt(measureEl.dataset.measure);
+                    if (isNaN(measure)) return;
+
+                    const subdivForMeasure = song.measureSubdivisions[measure - 1] || song.subdivision;
+                    const subdivPerBeat = subdivForMeasure / 4;
+                    const baseBeatWidth = 25;
+                    const beatsInMeasure = song.measureBeats[measure - 1] || 4;
+                    const measureWidth = baseBeatWidth * beatsInMeasure * subdivPerBeat;
+                    const beatWidth = measureWidth / beatsInMeasure;
+                    const rect = measureEl.getBoundingClientRect();
+                    const xInMeasure = e.clientX - rect.left;
+                    const beat = Math.max(1, Math.min(beatsInMeasure, Math.floor(xInMeasure / beatWidth) + 1));
+                    const xInBeat = xInMeasure - (beat - 1) * beatWidth;
+                    const subPos = Math.max(1, Math.floor(xInBeat / (beatWidth / subdivPerBeat)) + 1);
+                    const subdivPos = (beat - 1) * subdivPerBeat + subPos;
+
+                    addEventAtPosition(measure, subdivPos, 'pilot');
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                app.lastMouseX = e.clientX;
+                app.lastMouseY = e.clientY;
+            });
+
+            document.getElementById('closeTempoRampModal').addEventListener('click', () => {
+                document.getElementById('tempoRampModal').classList.remove('visible');
+                app.tempoRampPending = null;
+                app.tempoRampStart = null;
+            });
+
+            document.getElementById('cancelTempoRamp').addEventListener('click', () => {
+                document.getElementById('tempoRampModal').classList.remove('visible');
+                app.tempoRampPending = null;
+                app.tempoRampStart = null;
+            });
+
+            document.getElementById('applyTempoRamp').addEventListener('click', () => {
+                if (!app.tempoRampPending) return;
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (!song) return;
+
+                const startTempo = parseInt(document.getElementById('rampStartTempo').value) || song.bpm;
+                const endTempo = parseInt(document.getElementById('rampEndTempo').value) || song.bpm;
+
+                const ramp = {
+                    startMeasure: app.tempoRampPending.startMeasure,
+                    endMeasure: app.tempoRampPending.endMeasure,
+                    startTempo: startTempo,
+                    endTempo: endTempo
+                };
+
+                if (!song.tempoRamps) song.tempoRamps = [];
+                
+                const existingIndex = song.tempoRamps.findIndex(r => 
+                    r.startMeasure === ramp.startMeasure && r.endMeasure === ramp.endMeasure);
+                if (existingIndex >= 0) {
+                    song.tempoRamps[existingIndex] = ramp;
+                } else {
+                    song.tempoRamps.push(ramp);
+                }
+
+                song.tempoRamps.sort((a, b) => a.startMeasure - b.startMeasure);
+
+                saveToStorage();
+                renderGrid();
+
+                document.getElementById('tempoRampModal').classList.remove('visible');
+                app.tempoRampPending = null;
+                app.tempoRampStart = null;
+            });
+
+            function showTempoRampModal() {
+                if (!app.tempoRampPending) return;
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (!song) return;
+
+                document.getElementById('rampStartMeasure').textContent = app.tempoRampPending.startMeasure;
+                document.getElementById('rampEndMeasure').textContent = app.tempoRampPending.endMeasure;
+                document.getElementById('rampStartTempo').value = song.bpm;
+                document.getElementById('rampEndTempo').value = song.bpm;
+                app.tempoRampStartTempo = song.bpm;
+
+                document.getElementById('tempoRampModal').classList.add('visible');
+                document.getElementById('rampEndTempo').focus();
+            }
+
+            document.querySelectorAll('.group-color-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const color = btn.dataset.color;
+                    applyGroupColor(color);
+                });
+            });
+
+            document.getElementById('deleteGroupBtn').addEventListener('click', () => {
+                if (app.selectedMeasures.length === 0) return;
+                
+                const song = app.playlist.find(s => s.id === app.activeSongId);
+                if (!song) return;
+                
+                const firstSelectedMeasure = app.selectedMeasures[0];
+                const existingGroup = song.customGroups.find(g => g.measures.includes(firstSelectedMeasure));
+                
+                if (existingGroup) {
+                    const measuresToRemove = app.selectedMeasures;
+                    existingGroup.measures = existingGroup.measures.filter(m => !measuresToRemove.includes(m));
+                    
+                    if (existingGroup.measures.length === 0) {
+                        song.customGroups = song.customGroups.filter(g => g.id !== existingGroup.id);
+                    }
+                }
+                
+                app.selectedMeasures = [];
+                updateSelectedMeasuresDisplay();
+                saveToStorage();
+                renderGrid();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                console.log('keydown:', e.key, 'target:', e.target.tagName);
+                if (e.key === ' ' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    if (app.isPlaying) {
+                        stopPlayback();
+                    } else {
+                        startPlayback();
+                    }
+                }
+                if (e.altKey && e.key === 'Delete' && app.selectedEvent) {
+                    e.preventDefault();
+                    deleteEvent(app.selectedEvent);
+                }
+                if (e.ctrlKey && e.key === 'c' && app.selectedEvent) {
+                    e.preventDefault();
+                    copyEvent();
+                }
+                if (e.ctrlKey && e.key === 'v' && app.copiedEvents && app.copiedEvents.length > 0) {
+                    e.preventDefault();
+                    pasteEventAtPlayhead();
+                }
+                if (e.ctrlKey && e.key === 'z') {
+                    e.preventDefault();
+                    undoPaste();
+                }
+
+                if (e.key === 'd' || e.key === 'D' || e.key === 'f' || e.key === 'F' || e.key === 's' || e.key === 'S') {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+                        return;
+                    }
+                    
+                    const song = app.playlist.find(s => s.id === app.activeSongId);
+                    if (!song) return;
+
+                    const clientX = e.clientX || app.lastMouseX;
+                    const clientY = e.clientY || app.lastMouseY;
+
+                    if (!clientX || !clientY) return;
+
+                    let targetMeasure = null;
+                    const measureEl = document.elementFromPoint(clientX, clientY);
+                    if (measureEl) {
+                        const measureDiv = measureEl.closest('.measure');
+                        if (measureDiv) {
+                            targetMeasure = parseInt(measureDiv.dataset.measure);
+                        }
+                    }
+
+                    if (targetMeasure === null || isNaN(targetMeasure)) return;
+
+                    if (e.key === 'd' || e.key === 'D') {
+                        app.tempoRampStart = targetMeasure;
+                        app.tempoRampPending = null;
+                        renderGrid();
+                    } else if (e.key === 'f' || e.key === 'F') {
+                        if (app.tempoRampStart && app.tempoRampStart !== targetMeasure) {
+                            app.tempoRampPending = {
+                                startMeasure: app.tempoRampStart,
+                                endMeasure: targetMeasure
+                            };
+                            showTempoRampModal();
+                        }
+                    } else if (e.key === 's' || e.key === 'S') {
+                        const rampIndex = song.tempoRamps.findIndex(r => r.startMeasure === targetMeasure);
+                        if (rampIndex >= 0) {
+                            song.tempoRamps.splice(rampIndex, 1);
+                            saveToStorage();
+                            renderGrid();
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# Fichiers de travail locaux — ne jamais committer
+*.backup
+*.bak
+index_check.html
+
+# Sauvegardes d'éditeurs
+*~
+*.swp
+*.swo
+
+# Système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Éditeurs / IDE
+.vscode/
+.idea/
