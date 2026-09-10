@@ -7,6 +7,9 @@ rampes de tempo, groupes de mesures colorés, démarrage sur détection audio, s
 > `SPEC.md` = spécification d'origine du projet. Le présent README décrit le **comportement réel vérifié
 > dans `index.html`** (voir « Écarts avec SPEC.md » en bas de page).
 
+## Interface
+<img width="1903" height="990" alt="image" src="https://github.com/user-attachments/assets/a40cdae0-5f73-4c3f-a96e-2b343d922e8b" />
+
 ## Démarrage
 
 1. Ouvrir `index.html` dans Chrome ou Edge (double-clic suffit pour l'édition et la lecture).
