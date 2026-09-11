@@ -10,7 +10,7 @@ rampes de tempo, groupes de mesures colorés, démarrage sur détection audio, s
 - J'ai développé cet outil pour pouvoir piloter mes lumières, ma WING (Console) et les pédaliers des gratteux !
 - L'idée était de créer un séquencer simple dans lequel je créerais des mesures à la volée, 2 temps, 3 temps, 4 temps, 5 temps etc... Que chaque mesure pourrait être divisée un subdivisions, à la noire , la croche, triolets etc...
 - L'appli le permet et bien plus. On peut réduire le tempo, l'augmenter, mettre des couleurs par couplet, refrain etc...
-- Et surtout, on peut lancer la lecture via un PC venant de ma WING quand je mets en lecture mon playback. Pour un tempo bien en place, pas de soucis, j'ai juste mis une compensention ou retard à l'allumage (250ms était la bonne valeur) car le démarrage de la lecture n'était pas instantané sur ma console !
+- Et surtout, on peut lancer la lecture via un PC (Program Change) venant de ma WING quand je mets en lecture mon playback. Pour un tempo bien en place, pas de soucis, j'ai juste mis une compensention ou retard à l'allumage (250ms était la bonne valeur) car le démarrage de la lecture n'était pas instantané sur ma console !
 - Si par contre on veut piloter via un clic audio, cela est possible aussi avec un clic bien propre bien sûr !
 
 ## Interface
